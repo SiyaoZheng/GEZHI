@@ -12,7 +12,16 @@ from unittest import mock
 
 from goal_cli.adapters import api_tik_client_options, build_api_tik_prompt, effective_api_tik_model, run_tik
 from goal_cli.config import DEFAULT_API_TIK_BASE_URL, DEFAULT_API_TIK_MODEL, ConfigError, TikConfig, TokConfig, load_config, validate_config
-from goal_cli.runtime import DEFAULT_MAX_MINUTES, HeartbeatLock, RuntimeOptions, cleanup_runtime, load_state, run_heartbeat, run_goal
+from goal_cli.runtime import (
+    DEFAULT_MAX_MINUTES,
+    HeartbeatLock,
+    RuntimeOptions,
+    cleanup_runtime,
+    effective_lock_stale_seconds,
+    load_state,
+    run_heartbeat,
+    run_goal,
+)
 from goal_cli.tok_execution import build_claude_code_goal_tok_plan, build_codex_app_server_tok_plan, build_codex_goal_tok_plan, execute_tok
 
 
@@ -31,6 +40,34 @@ class GoalRuntimeTests(unittest.TestCase):
                 self.assertTrue(lock_path.exists())
 
             self.assertFalse(lock_path.exists())
+
+    def test_lock_stale_window_covers_the_configured_run_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self._write_basic_project(root)
+            config = load_config(root / "goal.toml")
+
+            self.assertEqual(config.safety.lock_stale_seconds, 6 * 60 * 60)
+            self.assertGreater(
+                effective_lock_stale_seconds(config, DEFAULT_MAX_MINUTES),
+                DEFAULT_MAX_MINUTES * 60,
+            )
+            self.assertEqual(effective_lock_stale_seconds(config, 5.0), config.safety.lock_stale_seconds)
+
+    def test_heartbeat_lock_touch_refreshes_only_an_owned_lock(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            lock_path = Path(temp_dir) / ".goal" / ".heartbeat.lock"
+            with HeartbeatLock(lock_path, stale_seconds=60) as lock:
+                os.utime(lock_path, (0, 0))
+                lock.touch()
+                self.assertGreater(lock_path.stat().st_mtime, 0)
+
+                foreign = {"pid": os.getpid(), "created_at": "2026-07-04T00:00:00+00:00", "token": "foreign"}
+                lock_path.write_text(json.dumps(foreign) + "\n", encoding="utf-8")
+                os.utime(lock_path, (0, 0))
+                lock.touch()
+                self.assertEqual(int(lock_path.stat().st_mtime), 0)
+                lock_path.write_text(json.dumps(lock.payload) + "\n", encoding="utf-8")
 
     def test_heartbeat_lock_exit_only_releases_owned_lock(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

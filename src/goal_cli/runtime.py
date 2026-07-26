@@ -43,6 +43,7 @@ from .transaction import load_transaction, mark_transaction_checkpointed, recove
 IGNORED_RUNTIME_METADATA_FILENAMES = {".DS_Store", "Thumbs.db", "desktop.ini"}
 IGNORED_RUNTIME_METADATA_DIRNAMES = {".Spotlight-V100", ".TemporaryItems", ".fseventsd"}
 DEFAULT_MAX_MINUTES = 600.0
+LOCK_STALE_MARGIN_SECONDS = 300
 RETIRED_INVALID_REVIEW_STATUSES = {
     "blocked_producer_failed",
     "blocked_artifact_missing",
@@ -213,6 +214,28 @@ class HeartbeatLock:
         except FileNotFoundError:
             pass
 
+    def touch(self) -> None:
+        """Prove liveness so a long pass is not mistaken for an abandoned lock."""
+        if not self.acquired or self.payload is None:
+            return
+        if _read_lock_payload(self.lock_path) != self.payload:
+            return
+        try:
+            os.utime(self.lock_path, None)
+        except OSError:
+            pass
+
+
+def effective_lock_stale_seconds(config: GoalConfig, max_minutes: float) -> int:
+    """A heartbeat allowed to run for N minutes is not stale before N minutes.
+
+    ``safety.lock_stale_seconds`` defaults to 6h while ``--max-minutes``
+    defaults to 600 (10h), so the configured value alone would let a scheduled
+    tick steal the lock from a still-running heartbeat.
+    """
+    budget = int(max(0.0, max_minutes) * 60.0) + LOCK_STALE_MARGIN_SECONDS
+    return max(int(config.safety.lock_stale_seconds), budget)
+
 
 def _read_lock_payload(lock_path: Path) -> dict[str, Any] | None:
     try:
@@ -263,9 +286,12 @@ class HeartbeatRunner:
     run_dir: Path | None = None
     pending_transaction_journal: Path | None = None
     current_attempt_context: AttemptContext | None = None
+    lock: HeartbeatLock | None = None
 
     def run(self) -> RunResult:
-        with HeartbeatLock(self.config.lock_path, self.config.safety.lock_stale_seconds):
+        stale_seconds = effective_lock_stale_seconds(self.config, self.options.max_minutes)
+        with HeartbeatLock(self.config.lock_path, stale_seconds) as lock:
+            self.lock = lock
             self.state = load_state(self.config)
             recovery_result = self._recover_transactions()
             if recovery_result is not None:
@@ -1308,6 +1334,8 @@ class HeartbeatRunner:
         self._recorder().append_event(event, self._run_dir(), artifact)
 
     def _heartbeat(self, phase: str, run_dir: Path | None) -> None:
+        if self.lock is not None:
+            self.lock.touch()
         self._recorder().heartbeat(phase, run_dir)
 
     def _run_dir(self) -> Path:
