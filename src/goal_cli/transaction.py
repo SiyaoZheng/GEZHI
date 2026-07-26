@@ -171,7 +171,15 @@ def mark_transaction_checkpointed(journal_path: Path) -> None:
     if journal.get("status") != "COMMITTED":
         raise ValueError(f"cannot checkpoint transaction in status {journal.get('status')}")
     journal["status"] = "CHECKPOINTED"
+    # A checkpointed journal is never replayed, so the whole-tree baseline map
+    # and the staged payload copies are dead weight. Dropping them keeps the
+    # audit trail (mutations and steps) while stopping .goal/transactions from
+    # growing by one repository snapshot per heartbeat.
+    if "baseline" in journal:
+        journal.pop("baseline")
+        journal["baseline_pruned"] = True
     _atomic_write_json(journal_path, journal)
+    _prune_staged_payloads(journal_path.parent)
 
 
 def recover_transactions(canonical_root: Path, state_dir: Path) -> tuple[TransactionResult, ...]:
@@ -195,6 +203,17 @@ def recover_transactions(canonical_root: Path, state_dir: Path) -> tuple[Transac
             continue
         results.append(commit_transaction(canonical_root, journal_path))
     return tuple(results)
+
+
+def _prune_staged_payloads(transaction_dir: Path) -> None:
+    staged_dir = transaction_dir / "staged"
+    if not staged_dir.is_dir():
+        return
+    shutil.rmtree(staged_dir, ignore_errors=True)
+    try:
+        _fsync_directory(transaction_dir)
+    except OSError:
+        return
 
 
 def load_transaction(journal_path: Path) -> dict[str, Any]:

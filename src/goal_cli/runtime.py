@@ -1685,7 +1685,7 @@ def append_history(config: GoalConfig, state: dict[str, Any], event: dict[str, A
         history = []
         state["history"] = history
     history.append({"at": now_iso(), **event})
-    del history[:-config.safety.max_history_items]
+    del history[: -max(1, config.safety.max_history_items)]
 
 
 def cleanup_runtime(config: GoalConfig, kill_orphans: bool = False) -> CleanupResult:
