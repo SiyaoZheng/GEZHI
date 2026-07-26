@@ -1894,8 +1894,9 @@ def extract_json_object_with_span(
 
 
 def verdict_prefer_keys(config: GoalConfig) -> tuple[str, ...]:
-    keys = {config.tik.verdict.ready_field, *config.tik.verdict.required_fields}
-    return tuple(sorted(keys))
+    # Select the reviewer's last attempted verdict first, then let
+    # parse_tik_verdict() report any missing required fields from that object.
+    return (config.tik.verdict.ready_field,)
 
 
 def tik_handoff_text(config: GoalConfig, text: str) -> str:
