@@ -1824,7 +1824,7 @@ def update_heartbeat(config: GoalConfig, state: dict[str, Any], phase: str, run_
 
 def parse_tik_verdict(config: GoalConfig, memo_path: Path) -> tuple[dict[str, Any], bool]:
     memo_text = memo_path.read_text(encoding="utf-8")
-    parsed = extract_json_object(memo_text)
+    parsed = extract_json_object(memo_text, verdict_prefer_keys(config))
     if parsed is None:
         return _parse_error_verdict(config, "Tik did not return parseable JSON.", memo_path), True
     for required_field in config.tik.verdict.required_fields:
@@ -1849,12 +1849,22 @@ def parse_tik_verdict(config: GoalConfig, memo_path: Path) -> tuple[dict[str, An
     return verdict, False
 
 
-def extract_json_object(text: str) -> dict[str, Any] | None:
-    extracted = extract_json_object_with_span(text)
+def extract_json_object(text: str, prefer_keys: tuple[str, ...] = ()) -> dict[str, Any] | None:
+    extracted = extract_json_object_with_span(text, prefer_keys)
     return extracted[0] if extracted else None
 
 
-def extract_json_object_with_span(text: str) -> tuple[dict[str, Any], tuple[int, int]] | None:
+def extract_json_object_with_span(
+    text: str,
+    prefer_keys: tuple[str, ...] = (),
+) -> tuple[dict[str, Any], tuple[int, int]] | None:
+    """Pick the JSON object a reviewer meant as its verdict.
+
+    A review memo often restates the requested shape before answering, so the
+    first parseable object in the text is not reliably the verdict. When
+    ``prefer_keys`` is given, the last object carrying all of those keys wins;
+    otherwise the original first-match order applies.
+    """
     candidates: list[tuple[str, int, int]] = []
     for match in re.finditer(r"```(?:json)?\s*(.*?)\s*```", text, flags=re.DOTALL | re.IGNORECASE):
         candidates.append((match.group(1).strip(), match.start(0), match.end(0)))
@@ -1866,19 +1876,30 @@ def extract_json_object_with_span(text: str) -> tuple[dict[str, Any], tuple[int,
     end = text.rfind("}")
     if start != -1 and end > start:
         candidates.append((text[start : end + 1], start, end + 1))
+    parsed_candidates: list[tuple[dict[str, Any], tuple[int, int]]] = []
     for candidate, span_start, span_end in candidates:
         try:
             parsed = json.loads(candidate)
         except json.JSONDecodeError:
             continue
         if isinstance(parsed, dict):
-            return parsed, (span_start, span_end)
-    return None
+            parsed_candidates.append((parsed, (span_start, span_end)))
+    if not parsed_candidates:
+        return None
+    if prefer_keys:
+        preferred = [item for item in parsed_candidates if all(key in item[0] for key in prefer_keys)]
+        if preferred:
+            return max(preferred, key=lambda item: item[1][0])
+    return parsed_candidates[0]
+
+
+def verdict_prefer_keys(config: GoalConfig) -> tuple[str, ...]:
+    keys = {config.tik.verdict.ready_field, *config.tik.verdict.required_fields}
+    return tuple(sorted(keys))
 
 
 def tik_handoff_text(config: GoalConfig, text: str) -> str:
-    _ = config
-    extracted = extract_json_object_with_span(text)
+    extracted = extract_json_object_with_span(text, verdict_prefer_keys(config))
     if extracted:
         _, (start, end) = extracted
         text = f"{text[:start]}{text[end:]}"

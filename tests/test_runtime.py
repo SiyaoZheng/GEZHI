@@ -18,6 +18,7 @@ from goal_cli.runtime import (
     RuntimeOptions,
     cleanup_runtime,
     effective_lock_stale_seconds,
+    extract_json_object,
     load_state,
     run_heartbeat,
     run_goal,
@@ -68,6 +69,20 @@ class GoalRuntimeTests(unittest.TestCase):
                 lock.touch()
                 self.assertEqual(int(lock_path.stat().st_mtime), 0)
                 lock_path.write_text(json.dumps(lock.payload) + "\n", encoding="utf-8")
+
+    def test_verdict_extraction_prefers_the_object_carrying_the_verdict_field(self) -> None:
+        memo = (
+            "Answer with this shape:\n\n"
+            "```json\n{\"artifact_ready\": true}\n```\n\n"
+            "The bibliography is still broken.\n\n"
+            "```json\n{\"artifact_ready\": false, \"reviewed_sha256\": \"abc\"}\n```\n"
+        )
+
+        self.assertEqual(extract_json_object(memo), {"artifact_ready": True})
+        self.assertEqual(
+            extract_json_object(memo, ("artifact_ready",)),
+            {"artifact_ready": False, "reviewed_sha256": "abc"},
+        )
 
     def test_heartbeat_lock_exit_only_releases_owned_lock(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
