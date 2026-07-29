@@ -1,374 +1,171 @@
 <!-- markdownlint-disable MD013 MD033 MD041 -->
 
 <p align="center">
-  <img src=".github/assets/goal-cli-mark-generated.png" alt="goal-cli terminal wink logo" width="112" />
+  <img src=".github/assets/gezhi-readme-cover.svg" alt="GEZHI: a scholar-centered agent architecture for empirical social-science research" width="100%" />
 </p>
 
-<h1 align="center">goal-cli</h1>
+<h1 align="center">GEZHI · 格致</h1>
 
 <p align="center">
-  <strong>Make agents finish THE THING.</strong>
-</p>
-
-<p align="center">
-  <a href="#quick-start"><strong>Quick Start</strong></a>
-  &nbsp;/&nbsp;
-  <a href="#name-the-thing">The Thing</a>
-  &nbsp;/&nbsp;
-  <a href="#what-it-does">What It Does</a>
-  &nbsp;/&nbsp;
-  <a href="#the-science-behind-it">Science</a>
-  &nbsp;/&nbsp;
-  <a href="#technical-details">Details</a>
+  <strong>A scholar-centered agent architecture for empirical social-science research.</strong>
 </p>
 
 <p align="center">
-  <strong>English</strong>
+  Keep research judgment traceable, reviewable, and verifiable.
+</p>
+
+<p align="center">
+  <a href="#why-gezhi"><strong>Why GEZHI</strong></a>
+  &nbsp;/&nbsp;
+  <a href="#architecture">Architecture</a>
+  &nbsp;/&nbsp;
+  <a href="#quick-start">Quick Start</a>
+  &nbsp;/&nbsp;
+  <a href="#current-implementation">Implementation</a>
   &nbsp;/&nbsp;
   <a href="README.zh-CN.md">中文</a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/SiyaoZheng/GEZHI"><img alt="GitHub stars" src="https://img.shields.io/github/stars/SiyaoZheng/goal-cli?style=for-the-badge&amp;logo=github&amp;label=star%20goal-cli&amp;color=181717&amp;labelColor=ffffff" /></a>
-  <img alt="One prompt" src="https://img.shields.io/badge/one%20prompt-THE%20THING-43d17a?style=for-the-badge&amp;labelColor=07110c" />
-  <img alt="Adaptive heartbeat" src="https://img.shields.io/badge/heartbeat-adaptive-f4c542?style=for-the-badge&amp;labelColor=171204" />
-  <img alt="PDFs sites reports apps" src="https://img.shields.io/badge/works%20for-PDFs%20%7C%20sites%20%7C%20reports%20%7C%20apps-6aa9ff?style=for-the-badge&amp;labelColor=07101f" />
-  <img alt="No code review required" src="https://img.shields.io/badge/no%20code%20review%20required-check%20the%20thing-f07a5f?style=for-the-badge&amp;labelColor=1b0905" />
+  <a href="https://github.com/SiyaoZheng/GEZHI/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/SiyaoZheng/GEZHI?style=for-the-badge&amp;logo=github&amp;label=star%20GEZHI&amp;color=181717&amp;labelColor=ffffff" /></a>
+  <img alt="Active research software" src="https://img.shields.io/badge/status-active%20research%20software-C1122F?style=for-the-badge" />
+  <img alt="Scholar centered" src="https://img.shields.io/badge/design-scholar--centered-6B625B?style=for-the-badge" />
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-1C1C1C?style=for-the-badge" /></a>
 </p>
 
-Coding agents love code.
+> [!NOTE]
+> **GEZHI is the public project.** The runtime command and Python package remain
+> named **`goal-cli`** so existing projects do not break.
 
-You want the thing.
+## Why GEZHI
 
-Not a diff.
+AI can retrieve literature, organize evidence, clean data, write code, and
+format manuscripts. But a social-science paper is not a checklist of tasks. It
+is a chain of judgments about theory, design, measurement, evidence, inference,
+and the boundaries of a credible claim.
 
-Not a status update.
+GEZHI organizes agents around those judgments.
 
-Not "almost done."
+It gives repetitive execution to AI while keeping the researcher at the
+architecture layer—as thinker, planner, and gatekeeper.
 
-The thing.
+## Architecture
 
-The PDF.
+```mermaid
+flowchart TB
+    R["Researcher<br/>thinker · planner · gatekeeper"]
+    G["GEZHI research loop"]
+    GE["格 · review<br/>whole-paper judgment · root diagnosis · bounded brief"]
+    ZHI["致 · revise<br/>authorized edits · rebuild · return evidence"]
+    S["AI4SS research skill layer<br/>design · evidence · analysis · writing"]
+    C["goal-cli control plane<br/>produce · review · route · repeat"]
+    A["Paper + code + data + provenance"]
 
-The website.
+    R --> G
+    C --> G
+    S --> G
+    G --> GE
+    GE --> ZHI
+    ZHI --> A
+    A --> GE
+    GE --> R
+```
 
-The report.
+| Layer | Responsibility |
+| --- | --- |
+| **Research architecture** | The researcher decides what matters, plans the research path, and guards evidentiary and inferential boundaries. |
+| **Scholarly capability** | The AI4SS skill layer supports research design, evidence construction, analysis review, and academic writing. |
+| **Control plane** | `goal-cli` rebuilds the artifact, requests review, persists the decision, and schedules the next bounded pass. |
 
-The chart pack.
+## 格 and 致
 
-The app demo.
+### 格 · judge the whole
 
-`goal-cli` keeps the thing in the center.
+`格` reviews the current paper as one integrated argument.
 
-It rebuilds the thing.
+- cover the full scholarly object, not a sequence of mechanical stages;
+- make judgments, not just scores;
+- diagnose one root problem, not a pile of surface symptoms;
+- return evidence and explicit completion conditions.
 
-It checks the thing.
+### 致 · revise within bounds
 
-If the thing is not good enough, the agent gets another work pass.
+`致` receives the active scholarly focus and performs a bounded revision.
 
-Chat confidence does not count.
-
-The thing does.
+- edit only authorized source files;
+- rebuild the paper and analysis rather than claiming completion in chat;
+- preserve data, code, and provenance as inspectable evidence;
+- return the new artifact to `格` for another whole-paper judgment.
 
 ## Quick Start
 
-Paste one sentence into your coding agent.
-
-```text
-Hi, read https://github.com/SiyaoZheng/GEZHI/blob/main/llms.txt and do what it says.
-```
-
-That is it.
-
-The details live in [`llms.txt`](llms.txt).
-
-The agent reads them.
-
-You judge the thing.
-
-## Name The Thing
-
-<p align="center">
-  <img src=".github/assets/goal-cli-personas-human.png" alt="Scholars, designers, hobbyists, accountants, and analysts each holding the thing they need a coding agent to finish" width="100%" />
-</p>
-
-Different people.
-
-Different things.
-
-Same rule.
-
-Name it.
-
-Make the agent come back to it.
-
-| Who | What they say |
-| --- | --- |
-| <img alt="Scholar" src="https://img.shields.io/badge/scholar-34d399?style=flat-square&amp;labelColor=062014" /> | "Show me the PDF." |
-| <img alt="Designer" src="https://img.shields.io/badge/designer-f59e0b?style=flat-square&amp;labelColor=241504" /> | "Show me the poster." |
-| <img alt="Hobbyist" src="https://img.shields.io/badge/hobbyist-60a5fa?style=flat-square&amp;labelColor=071426" /> | "Does my app run?" |
-| <img alt="Accountant" src="https://img.shields.io/badge/accountant-a78bfa?style=flat-square&amp;labelColor=160d24" /> | "Do the numbers tie?" |
-| <img alt="Analyst" src="https://img.shields.io/badge/analyst-f87171?style=flat-square&amp;labelColor=240909" /> | "Does the chart move?" |
-
-## What It Does
-
-One prompt.
-
-One thing.
-
-One heartbeat when the saved schedule says work is due.
-
-| Move | What happens |
-| --- | --- |
-| <img alt="Rebuild" src="https://img.shields.io/badge/rebuild-22c55e?style=flat-square&amp;labelColor=052e16" /> | Rebuild the thing. |
-| <img alt="Check" src="https://img.shields.io/badge/check-eab308?style=flat-square&amp;labelColor=332600" /> | Check the thing. |
-| <img alt="Source" src="https://img.shields.io/badge/source-3b82f6?style=flat-square&amp;labelColor=082f49" /> | Change only allowed source files. |
-| <img alt="Repeat" src="https://img.shields.io/badge/repeat-ef4444?style=flat-square&amp;labelColor=3b0909" /> | Try again on the next heartbeat. |
-
-The question is not:
-
-"Did the agent change code?"
-
-The question is:
-
-"Is the thing better?"
-
-| You care about | The agent must prove |
-| --- | --- |
-| A paper | The PDF is rebuilt and worth reading. |
-| A website | The built page opens and looks right. |
-| A report | The numbers and narrative are inspectable. |
-| A chart pack | The exported charts are current. |
-| A demo app | The app runs in the expected state. |
-
-## The Science Behind It
-
-People are calling this
-[loop engineering](https://addyosmani.com/blog/loop-engineering/).
-
-The hype says:
-
-Do not write one perfect prompt.
-
-Build a loop.
-
-Make it run.
-
-Make it check.
-
-Make it try again.
-
-`goal-cli` is that idea for normal people.
-
-Every heartbeat asks:
-
-Did the thing get better?
-
-If yes, stop.
-
-If no, change source and come back on the next due heartbeat.
-
-Sources: [Addy Osmani](https://addyosmani.com/blog/loop-engineering/),
-[LangChain](https://www.langchain.com/blog/the-art-of-loop-engineering/),
-[ADTMAG](https://adtmag.com/articles/2026/07/01/loop-engineering-emerges-as-developers-put-ai-coding-agents-on-repeat.aspx).
-
-<details id="technical-details">
-<summary><strong>Technical Details</strong></summary>
-
-### How It Works
-
-The setup file is `goal.toml`. It answers a few plain questions:
-
-| Question | In `goal.toml` |
-| --- | --- |
-| What finished output should I inspect? | `[artifact].path` |
-| How do I rebuild it? | `[producer].command` |
-| How should it be checked? | `[tik]` |
-| Which source files count as valid tok edits? | `[tok].write_dirs` |
-| Where may runtime commands produce side effects? | `[tok].runtime_write_dirs` |
-
-You may see these short names in the config and deeper docs:
-
-| Name | Plain meaning |
-| --- | --- |
-| `artifact` | The finished output you can inspect. |
-| `producer` | The command that rebuilds that output. |
-| `tik` | The reviewer that rejects weak output. |
-| `tok` | The coding agent that changes source files under the audited source scope. |
-| `.goal/` | The folder where runs, reviews, and state are recorded. |
-
-Example:
-
-```toml
-name = "paper-ready"
-state_dir = ".goal"
-runs_dir = ".goal/runs"
-
-[artifact]
-path = "outputs/writing/full_paper.pdf"
-copy_as = "full_paper.pdf"
-
-[producer]
-command = "python3 scripts/orchestrator.py --full"
-
-[tik]
-provider = "codex_file"
-timeout_seconds = 1800
-max_file_size_bytes = 25000000
-max_output_tokens = 4096
-
-[tok]
-provider = "codex_goal"
-write_dirs = ["src", "data"]
-run_cwd = "."
-runtime_write_dirs = ["outputs", "build", "logs"]
-sandbox = "workspace-write"
-codex_features = ["goals"]
-
-[safety]
-generated_dirs = ["outputs", "build", "logs"]
-max_blocker_repeats = 3
-```
-
-To run several reviewers at once, move provider-specific fields into
-`[[tik.providers]]`. The heartbeat runs them in parallel and hands tok one
-aggregate `tik.md` containing every provider result.
-
-```toml
-[tik]
-timeout_seconds = 1800
-
-[[tik.providers]]
-label = "codex"
-provider = "codex_file"
-
-[[tik.providers]]
-label = "claude"
-provider = "claude_code_file"
-
-[[tik.providers]]
-label = "checklist"
-provider = "checklist"
-command = "python3 scripts/checklist_review.py"
-```
-
-Use `codex_app_server` instead of `codex_goal` when tok should drive Codex
-through `codex app-server --stdio` rather than `codex exec`. Swap
-`codex_file` for `claude_code_file` and `codex_goal` for `claude_code_goal` to
-run the same loop through Claude Code instead of Codex;
-[`examples/scientificity-claude/goal.toml`](examples/scientificity-claude/goal.toml)
-is the all-Claude version of this setup.
-
-Use `checklist` for command-backed checklist reviews that should appear as
-their own tik provider in ledgers and state.
-
-The important boundary is simple: the fixing agent edits source, but the final
-result has to be rebuilt and checked before the work counts as done.
-
-### Perpetual Goals
-
-Perpetual mode is explicit opt-in. It keeps one fixed substantive goal alive
-through bounded heartbeats, sleeps when the artifact is healthy, and applies
-model or producer changes only through an exact file-operation lease:
-
-```toml
-[perpetual]
-enabled = true
-substantive_goal = "Resolve the fixed substantive objections in the paper."
-
-[lease]
-version = "paper-v1"
-allow_shell = true
-allow_network = false
-
-[[lease.rules]]
-effect = "allow"
-operations = ["create", "modify", "delete", "rename"]
-paths = ["manuscript/**", "analysis/**"]
-
-[[lease.rules]]
-effect = "allow"
-operations = ["create", "modify"]
-paths = ["output/paper.pdf"]
-```
-
-Healthy inspection defaults to 6 hours, active or blocked work to 30 minutes,
-and provider failures to 5 minutes, 30 minutes, then 2 hours capped. The OS
-timer wakes every 5 minutes by default for perpetual goals, but `next_due_at`
-short-circuits work that is not due. `goal-cli state` shows the immutable goal
-binding, bounded attempt evidence, and transaction recovery journal. Use
-`goal-cli stop` and `goal-cli resume` for durable operator control without
-terminal completion. See the
-[full perpetual and lease schema](docs/config-schema.md#perpetual-mode-and-capability-leases).
-
-### Installing From This Checkout
-
-If you are working inside the `goal-cli` repository itself:
+Install the current GEZHI control plane from this repository:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python3 -m pip install --upgrade pip
-python3 -m pip install -e '.[openai]'
+python3 -m pip install "goal-cli[openai] @ git+https://github.com/SiyaoZheng/GEZHI.git"
 goal-cli --help
 ```
 
-Use the basic install without OpenAI support when you only need local checks:
+Then give your coding agent one entrypoint:
 
-```bash
-python3 -m pip install -e .
+```text
+Read https://github.com/SiyaoZheng/GEZHI/blob/main/llms.txt and configure this project as a GEZHI research loop.
 ```
 
-### Commands
-
-| Command | What it does |
-| --- | --- |
-| `goal-cli init` | Create a starter `goal.toml`. |
-| `goal-cli validate` | Check that the config is shaped correctly. |
-| `goal-cli doctor` | Check whether the local setup is ready to run. |
-| `goal-cli run --dry-run` | Render the prompts and run folder without calling repair agents. |
-| `goal-cli run --max-minutes 600` | Run one bounded work pass. |
-| `goal-cli heartbeat install --max-minutes 600` | Install a per-user OS timer; perpetual goals default to a five-minute wake-up. |
-| `goal-cli heartbeat status` | Show the OS timer status and managed paths. |
-| `goal-cli stop` / `goal-cli resume` | Persistently stop or resume a perpetual goal without completing it. |
-| `goal-cli tik` | Rebuild and review the output without running a repair pass. |
-| `goal-cli state` | Show the current saved state. |
-| `goal-cli cleanup` | Clear stale locks after an interrupted run. |
-| `goal-cli reset` | Remove saved state while keeping run records. |
-
-### Agent Skills
-
-If your coding agent supports skills, install the setup skill:
+For a first run, inspect the generated configuration before allowing an agent
+to edit research source:
 
 ```bash
-mkdir -p "$HOME/.codex/skills"
-cp -R skills/goal-cli-project-setup "$HOME/.codex/skills/"
+goal-cli validate
+goal-cli doctor
+goal-cli run --dry-run
 ```
 
-Use [`goal-cli-project-setup`](skills/goal-cli-project-setup/SKILL.md) for real
-projects. Use
-[`goal-cli-template-author`](skills/goal-cli-template-author/SKILL.md) only when
-you are improving reusable examples or docs in this repository.
+## Current Implementation
 
-### Docs
+This repository currently ships the control-plane implementation used by
+GEZHI. The compatibility name `goal-cli` remains visible in commands, package
+paths, and configuration.
 
-| Document | Use it when |
+| Path | Role in GEZHI |
 | --- | --- |
-| [Installing goal-cli](docs/installation.md) | You need more install details. |
-| [CLI reference](docs/cli-reference.md) | You want the full command help. |
-| [goal.toml schema](docs/config-schema.md) | You are editing config by hand. |
-| [goal-cli Skills](docs/skills.md) | You want agent-facing setup instructions. |
-| [Thing-first notes](docs/artifact-goal-notes.md) | You want the design rationale. |
-| [Codex implementation report](docs/codex-goal-openai-implementation-report.md) | You want the Codex `/goal` integration details. |
-| [PDF-first example](examples/scientificity/goal.toml) | You want a research-paper example. |
-| [PDF-first example, Claude Code](examples/scientificity-claude/goal.toml) | You want the same example with both passes run by Claude Code. |
+| [`src/goal_cli/`](src/goal_cli/) | Persistent artifact-first control loop |
+| [`goal-cli-project-setup`](skills/goal-cli-project-setup/SKILL.md) | Connect an existing research project to the GEZHI control loop |
+| [`goal-cli-template-author`](skills/goal-cli-template-author/SKILL.md) | Improve reusable project templates, checks, and examples |
+| [`examples/scientificity/`](examples/scientificity/) | Empirical-paper example with executable checks |
+| [`docs/config-schema.md`](docs/config-schema.md) | Full `goal.toml` contract |
+| [`docs/cli-reference.md`](docs/cli-reference.md) | Current command reference |
+| [`docs/artifact-goal-notes.md`](docs/artifact-goal-notes.md) | Control-plane design rationale |
 
-### Status
+## Non-negotiables
 
-`goal-cli` is early local tooling, currently version `0.1.0`.
+- **The artifact is the object of evaluation.** Agent activity is not evidence
+  of research progress.
+- **No invented evidence.** Missing information stays missing and constrains
+  the claim.
+- **One active root focus.** Revision effort stays bounded and auditable.
+- **Researcher responsibility remains human.** GEZHI does not replace
+  authorship, research ethics, or independent verification.
+- **Every pass leaves a trail.** Paper, code, data, provenance, review, and
+  decision remain inspectable.
 
-The project is distributed under the [MIT License](LICENSE). See
-[SECURITY.md](SECURITY.md) for vulnerability reporting and
-[CHANGELOG.md](CHANGELOG.md) for release notes.
+## Status
 
-</details>
+GEZHI is active research software. Its present public implementation is most
+useful for completed empirical social-science projects with executable
+analysis, a canonical paper artifact, and explicit evidence boundaries.
+
+The architecture is deliberately conservative: it can make an agent workflow
+more persistent and inspectable, but it cannot make a weak design, missing
+data, or an unsupported claim credible.
+
+## Project Links
+
+- **Repository:** [github.com/SiyaoZheng/GEZHI](https://github.com/SiyaoZheng/GEZHI)
+- **Author:** [siyaozheng.org](https://siyaozheng.org)
+- **Issues:** [GEZHI issue tracker](https://github.com/SiyaoZheng/GEZHI/issues)
+- **Security:** [SECURITY.md](SECURITY.md)
+
+## License
+
+[MIT](LICENSE)

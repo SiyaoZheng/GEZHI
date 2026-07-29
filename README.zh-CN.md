@@ -1,253 +1,161 @@
 <!-- markdownlint-disable MD013 MD033 MD041 -->
 
 <p align="center">
-  <img src=".github/assets/goal-cli-mark-generated.png" alt="goal-cli terminal wink logo" width="112" />
+  <img src=".github/assets/gezhi-readme-cover.svg" alt="格致：面向实证社会科学研究的学者中心智能体架构" width="100%" />
 </p>
 
-<h1 align="center">goal-cli</h1>
+<h1 align="center">格致 · GEZHI</h1>
 
 <p align="center">
-  <strong>Make agents finish THE THING.</strong>
-</p>
-
-<p align="center">
-  <a href="#快速开始"><strong>快速开始</strong></a>
-  &nbsp;/&nbsp;
-  <a href="#先说清楚要什么">要什么</a>
-  &nbsp;/&nbsp;
-  <a href="#怎么跑">怎么跑</a>
-  &nbsp;/&nbsp;
-  <a href="#背后的科学">科学</a>
-  &nbsp;/&nbsp;
-  <a href="#technical-details">细节</a>
+  <strong>面向实证社会科学研究的学者中心智能体架构</strong>
 </p>
 
 <p align="center">
+  让研究判断可追溯、可复核、可验证。
+</p>
+
+<p align="center">
+  <a href="#为什么需要格致"><strong>为什么</strong></a>
+  &nbsp;/&nbsp;
+  <a href="#系统架构">架构</a>
+  &nbsp;/&nbsp;
+  <a href="#快速开始">快速开始</a>
+  &nbsp;/&nbsp;
+  <a href="#当前实现">当前实现</a>
+  &nbsp;/&nbsp;
   <a href="README.md">English</a>
-  &nbsp;/&nbsp;
-  <strong>中文</strong>
 </p>
 
 <p align="center">
-  <a href="https://github.com/SiyaoZheng/GEZHI"><img alt="GitHub stars" src="https://img.shields.io/github/stars/SiyaoZheng/goal-cli?style=for-the-badge&amp;logo=github&amp;label=star%20goal-cli&amp;color=181717&amp;labelColor=ffffff" /></a>
-  <img alt="One prompt" src="https://img.shields.io/badge/one%20prompt-THE%20THING-43d17a?style=for-the-badge&amp;labelColor=07110c" />
-  <img alt="Adaptive heartbeat" src="https://img.shields.io/badge/heartbeat-adaptive-f4c542?style=for-the-badge&amp;labelColor=171204" />
-  <img alt="PDFs sites reports apps" src="https://img.shields.io/badge/works%20for-PDFs%20%7C%20sites%20%7C%20reports%20%7C%20apps-6aa9ff?style=for-the-badge&amp;labelColor=07101f" />
-  <img alt="No code review required" src="https://img.shields.io/badge/no%20code%20review%20required-check%20the%20thing-f07a5f?style=for-the-badge&amp;labelColor=1b0905" />
+  <a href="https://github.com/SiyaoZheng/GEZHI/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/SiyaoZheng/GEZHI?style=for-the-badge&amp;logo=github&amp;label=star%20GEZHI&amp;color=181717&amp;labelColor=ffffff" /></a>
+  <img alt="活跃研究软件" src="https://img.shields.io/badge/status-active%20research%20software-C1122F?style=for-the-badge" />
+  <img alt="学者中心" src="https://img.shields.io/badge/design-scholar--centered-6B625B?style=for-the-badge" />
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-1C1C1C?style=for-the-badge" /></a>
 </p>
 
-Coding agent 最爱干什么？
+> [!NOTE]
+> **GEZHI / 格致是公开项目名。** 为了不破坏已有项目，运行命令与 Python
+> 包仍保留 **`goal-cli`** 这一兼容名称。
 
-改代码。
+## 为什么需要格致
 
-但你真正要的，不是“我改了 12 个文件”。
+AI 可以检索文献、整理证据、清洗数据、编写代码，也可以协助写作与排版。
+但一篇社会科学论文不是任务清单，而是一连串关于理论、设计、测量、证据、
+推断与论断边界的判断。
 
-你要的是成品。
+格致把智能体组织在这些判断周围。
 
-能打开的 PDF。
+重复执行交给 AI，研究者则回到架构层，承担思考者、规划者与把关者的职责。
 
-能看的网页。
+## 系统架构
 
-能交的报告。
+```mermaid
+flowchart TB
+    R["研究者<br/>思考者 · 规划者 · 把关者"]
+    G["GEZHI 研究闭环"]
+    GE["格 · 评审<br/>全稿判断 · 根因诊断 · 有界任务书"]
+    ZHI["致 · 修订<br/>授权修改 · 重建成品 · 返回证据"]
+    S["AI4SS 研究能力层<br/>设计 · 证据 · 分析 · 写作"]
+    C["goal-cli 控制面<br/>生产 · 评审 · 路由 · 循环"]
+    A["论文 + 代码 + 数据 + 溯源"]
 
-能刷新的图表。
+    R --> G
+    C --> G
+    S --> G
+    G --> GE
+    GE --> ZHI
+    ZHI --> A
+    A --> GE
+    GE --> R
+```
 
-能跑起来的 demo。
+| 层次 | 职责 |
+| --- | --- |
+| **研究架构层** | 研究者决定什么值得研究，规划研究路径，并把关证据与推断边界。 |
+| **学术能力层** | AI4SS 能力层支持研究设计、证据构建、分析审查与学术写作。 |
+| **运行控制面** | `goal-cli` 重建成品、发起评审、持久化判断，并调度下一次有界工作。 |
 
-`goal-cli` 做一件事：
+## 格与致
 
-把 agent 拉回 THE THING。
+### 格 · 审全稿
 
-先重建成品。
+`格` 把当前论文当作一个完整论证来审查。
 
-再验收成品。
+- 保证学术关切的覆盖，而不是机械地依次过阶段；
+- 做判断，而不是只给分；
+- 诊断一个根本问题，而不是罗列表面症状；
+- 给出证据与明确的完成条件。
 
-不过关，再让它改源码。
+### 致 · 有界修订
 
-嘴上说“差不多了”不算。
+`致` 接收当前学术焦点，并完成一次边界清楚的修订。
 
-成品真的变好，才算。
+- 只修改获得授权的源文件；
+- 重建论文与分析，不以聊天里的“完成”代替成品；
+- 把数据、代码与溯源保留为可检查证据；
+- 把新成品交还给 `格`，再次进行全稿判断。
 
 ## 快速开始
 
-把这一句粘给你的 coding agent。
+从本仓库安装格致目前使用的控制面：
+
+```bash
+python3 -m pip install "goal-cli[openai] @ git+https://github.com/SiyaoZheng/GEZHI.git"
+goal-cli --help
+```
+
+然后把唯一入口交给 coding agent：
 
 ```text
-Hi, read https://github.com/SiyaoZheng/GEZHI/blob/main/llms.txt and do what it says.
+Read https://github.com/SiyaoZheng/GEZHI/blob/main/llms.txt and configure this project as a GEZHI research loop.
 ```
 
-就这一句。
+第一次运行前，先检查配置与环境：
 
-细节在 [`llms.txt`](llms.txt)。
-
-让 agent 自己读。
-
-你只看结果。
-
-## 先说清楚要什么
-
-<p align="center">
-  <img src=".github/assets/goal-cli-personas-human.png" alt="不同用户拿着自己要让 coding agent 做完的那个东西" width="100%" />
-</p>
-
-每个人要的都不一样。
-
-但规矩一样。
-
-先把要交付的东西说清楚。
-
-然后让 agent 一直回到它。
-
-| 你是谁 | 直接这么说 |
-| --- | --- |
-| 学者 <img alt="Scholar" src="https://img.shields.io/badge/scholar-34d399?style=flat-square&amp;labelColor=062014" /> | “先别讲代码，给我看 PDF。” |
-| 设计师 <img alt="Designer" src="https://img.shields.io/badge/designer-f59e0b?style=flat-square&amp;labelColor=241504" /> | “给我看海报成品。” |
-| 玩家 <img alt="Hobbyist" src="https://img.shields.io/badge/hobbyist-60a5fa?style=flat-square&amp;labelColor=071426" /> | “这个 app 能点开跑吗？” |
-| 会计 <img alt="Accountant" src="https://img.shields.io/badge/accountant-a78bfa?style=flat-square&amp;labelColor=160d24" /> | “数字对得上吗？” |
-| 分析师 <img alt="Analyst" src="https://img.shields.io/badge/analyst-f87171?style=flat-square&amp;labelColor=240909" /> | “图是不是新的？” |
-
-## 怎么跑
-
-一句 prompt。
-
-一个交付物。
-
-到点才跑的一次心跳。
-
-| 动作 | 发生什么 |
-| --- | --- |
-| <img alt="Rebuild" src="https://img.shields.io/badge/rebuild-22c55e?style=flat-square&amp;labelColor=052e16" /> | 重建交付物。 |
-| <img alt="Check" src="https://img.shields.io/badge/check-eab308?style=flat-square&amp;labelColor=332600" /> | 验收交付物。 |
-| <img alt="Source" src="https://img.shields.io/badge/source-3b82f6?style=flat-square&amp;labelColor=082f49" /> | 只改允许改的源码。 |
-| <img alt="Repeat" src="https://img.shields.io/badge/repeat-ef4444?style=flat-square&amp;labelColor=3b0909" /> | 半小时后再验一次。 |
-
-别问：
-
-“它改代码了吗？”
-
-要问：
-
-“我要的东西，真的变好了吗？”
-
-| 你在乎 | Agent 必须证明 |
-| --- | --- |
-| 论文 | PDF 重新生成了，读起来更像能交的稿子。 |
-| 网站 | 页面能打开，第一眼是对的。 |
-| 报告 | 数字、口径、叙事都能查。 |
-| 图表包 | 导出的图是新的，不是旧图冒充。 |
-| Demo app | App 在你要的状态里跑起来。 |
-
-## 背后的科学
-
-现在圈里把这事叫
-[loop engineering](https://addyosmani.com/blog/loop-engineering/)。
-
-说白了：
-
-别指望一个神 prompt 管到底。
-
-你要设计一个循环。
-
-跑一轮。
-
-验一轮。
-
-不过关，再来一轮。
-
-`goal-cli` 是这套思路的家用版。
-
-每半小时只问一个问题：
-
-东西变好了吗？
-
-好，停。
-
-不好，回去改源码，下一次心跳再验。
-
-来源：[Addy Osmani](https://addyosmani.com/blog/loop-engineering/)、
-[LangChain](https://www.langchain.com/blog/the-art-of-loop-engineering/)、
-[ADTMAG](https://adtmag.com/articles/2026/07/01/loop-engineering-emerges-as-developers-put-ai-coding-agents-on-repeat.aspx)。
-
-<details id="technical-details">
-<summary><strong>技术细节</strong></summary>
-
-配置文件叫 `goal.toml`。
-
-只写清楚四件事：
-
-| 问题 | 配置 |
-| --- | --- |
-| 我要验收哪个成品？ | `[artifact].path` |
-| 怎么重建它？ | `[producer].command` |
-| 怎么验收它？ | `[tik]` |
-| Agent 可以改哪些源码目录？ | `[tok].write_dirs` |
-| 运行时命令可以刷新哪些生成目录？ | `[tok].runtime_write_dirs` |
-
-`tik` 可以配置多个 provider 并行验收；每一路结果会合并成一份 `tik.md`
-交给 `tok`：
-
-```toml
-[tik]
-timeout_seconds = 1800
-
-[[tik.providers]]
-label = "codex"
-provider = "codex_file"
-
-[[tik.providers]]
-label = "claude"
-provider = "claude_code_file"
-
-[[tik.providers]]
-label = "checklist"
-provider = "checklist"
-command = "python3 scripts/checklist_review.py"
+```bash
+goal-cli validate
+goal-cli doctor
+goal-cli run --dry-run
 ```
 
-`tok.provider` 可以用 `codex_goal`、`codex_app_server` 或
-`claude_code_goal`；其中 `codex_app_server` 走 `codex app-server --stdio`。
+## 当前实现
 
-`tik.provider = "checklist"` 用来跑基于项目脚本的 checklist 验收，并在
-`tik.md` 和 state 里保留独立 provider 身份。
+本仓库目前提供格致使用的运行控制面。为了兼容已有项目，命令、包路径和配置中
+仍会看到 `goal-cli`。
 
-永续模式需要显式启用，并用 capability lease 固定允许的文件操作边界：
-
-```toml
-[perpetual]
-enabled = true
-substantive_goal = "解决论文中固定的一组实质性问题。"
-
-[lease]
-version = "paper-v1"
-allow_shell = true
-allow_network = false
-
-[[lease.rules]]
-effect = "allow"
-operations = ["create", "modify", "delete", "rename"]
-paths = ["manuscript/**", "analysis/**"]
-```
-
-默认节奏是：健康状态 6 小时复查一次，活跃或受阻状态 30 分钟一次，
-provider 故障按 5 分钟、30 分钟、2 小时封顶退避。永续目标的系统服务
-默认每 5 分钟唤醒一次，但未到 `next_due_at` 时不会调用 producer、Tik
-或 ToK。`goal-cli stop` 和 `goal-cli resume` 可以持久停止或恢复，而不把
-目标误记成完成。
-
-常用命令：
-
-| 命令 | 用途 |
+| 路径 | 在格致中的作用 |
 | --- | --- |
-| `goal-cli init` | 生成一份起步用的 `goal.toml`。 |
-| `goal-cli validate` | 检查配置有没有写歪。 |
-| `goal-cli doctor` | 检查本机能不能跑。 |
-| `goal-cli run --dry-run` | 预演一遍，不让 agent 真改。 |
-| `goal-cli run --max-minutes 600` | 跑一轮预算上限为 600 分钟的心跳。 |
-| `goal-cli heartbeat install --max-minutes 600` | 安装系统级定时心跳；永续目标默认每 5 分钟唤醒一次。 |
-| `goal-cli stop` / `goal-cli resume` | 持久停止或恢复永续目标，不产生终止完成状态。 |
+| [`src/goal_cli/`](src/goal_cli/) | 持久运行、以成品为中心的控制循环 |
+| [`goal-cli-project-setup`](skills/goal-cli-project-setup/SKILL.md) | 把现有研究项目接入 GEZHI 控制循环 |
+| [`goal-cli-template-author`](skills/goal-cli-template-author/SKILL.md) | 改进可复用模板、检查与示例 |
+| [`examples/scientificity/`](examples/scientificity/) | 带可执行检查的实证论文示例 |
+| [`docs/config-schema.md`](docs/config-schema.md) | 完整 `goal.toml` 契约 |
+| [`docs/cli-reference.md`](docs/cli-reference.md) | 当前命令说明 |
+| [`docs/artifact-goal-notes.md`](docs/artifact-goal-notes.md) | 控制面设计说明 |
 
-完整配置说明见 [docs/config-schema.md](docs/config-schema.md)。
+## 不可妥协的原则
 
-完整命令说明见 [docs/cli-reference.md](docs/cli-reference.md)。
+- **评估对象是成品。** 智能体做了多少事，不等于研究取得了多少进展。
+- **不编造证据。** 缺失信息必须继续缺失，并限制论断边界。
+- **一次聚焦一个根本问题。** 修订范围必须有界、可审计。
+- **研究责任仍属于研究者。** 格致不替代作者责任、研究伦理与独立核验。
+- **每一轮都留下证据链。** 论文、代码、数据、溯源、评审与判断都可检查。
 
-</details>
+## 项目状态
+
+格致目前是活跃开发中的研究软件，最适合具有可执行分析、唯一正式论文成品和
+清楚证据边界的已完成实证社会科学项目。
+
+它能够让智能体工作流更持久、更透明，但不能把薄弱设计、缺失数据或无证据支持
+的论断变得可信。
+
+## 项目链接
+
+- **代码仓库：** [github.com/SiyaoZheng/GEZHI](https://github.com/SiyaoZheng/GEZHI)
+- **作者主页：** [siyaozheng.org](https://siyaozheng.org)
+- **问题反馈：** [GEZHI issue tracker](https://github.com/SiyaoZheng/GEZHI/issues)
+- **安全说明：** [SECURITY.md](SECURITY.md)
+
+## 许可协议
+
+[MIT](LICENSE)

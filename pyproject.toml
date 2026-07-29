@@ -5,13 +5,13 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "goal-cli"
 version = "0.1.0"
-description = "Make agents finish THE THING."
+description = "The goal-cli control plane for GEZHI, a scholar-centered research agent architecture."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
 authors = [{ name = "Siyao Zheng" }]
 maintainers = [{ name = "Siyao Zheng" }]
-keywords = ["agents", "automation", "cli", "codex", "heartbeat", "local-first"]
+keywords = ["agents", "automation", "cli", "computational-social-science", "gezhi", "research", "reproducibility"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
