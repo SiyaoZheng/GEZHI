@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">GEZHI · 格致</title>
+  <desc id="desc">A scholar-centered agent architecture for empirical social-science research.</desc>
+  <rect width="1200" height="520" fill="#F7F5F0"/>
+  <rect width="1200" height="12" fill="#C1122F"/>
+  <rect x="920" width="280" height="520" fill="#C1122F"/>
+  <line x1="72" y1="402" x2="850" y2="402" stroke="#D9D5D0" stroke-width="2"/>
+  <line x1="958" y1="66" x2="1160" y2="66" stroke="#F7F5F0" stroke-width="2"/>
+  <line x1="958" y1="406" x2="1160" y2="406" stroke="#F7F5F0" stroke-width="2"/>
+
+  <text x="72" y="188" fill="#1C1C1C" font-family="'Songti SC','Noto Serif CJK SC',serif" font-size="94">格致</text>
+  <text x="72" y="252" fill="#C1122F" font-family="'Songti SC','Noto Serif CJK SC',serif" font-size="38" font-weight="700">面向社科研究的智能体架构</text>
+  <text x="72" y="312" fill="#5F5F5F" font-family="'Helvetica Neue',Arial,sans-serif" font-size="23">A scholar-centered agent architecture</text>
+  <text x="72" y="345" fill="#5F5F5F" font-family="'Helvetica Neue',Arial,sans-serif" font-size="23">for empirical social-science research</text>
+  <text x="72" y="450" fill="#1C1C1C" font-family="'Songti SC','Noto Serif CJK SC',serif" font-size="20" font-weight="600">研究判断 · 可追溯 · 可复核 · 可验证</text>
+
+  <text x="958" y="132" fill="#FFFFFF" font-family="'Helvetica Neue',Arial,sans-serif" font-size="22" font-weight="700">GEZHI</text>
+  <text x="958" y="208" fill="#FFFFFF" font-family="'Songti SC','Noto Serif CJK SC',serif" font-size="24" font-weight="700">学者中心的</text>
+  <text x="958" y="244" fill="#FFFFFF" font-family="'Songti SC','Noto Serif CJK SC',serif" font-size="24" font-weight="700">研究闭环</text>
+  <text x="958" y="316" fill="#FFFFFF" font-family="'Helvetica Neue',Arial,sans-serif" font-size="16" font-weight="700">THINKER</text>
+  <text x="958" y="344" fill="#FFFFFF" font-family="'Helvetica Neue',Arial,sans-serif" font-size="16" font-weight="700">PLANNER</text>
+  <text x="958" y="372" fill="#FFFFFF" font-family="'Helvetica Neue',Arial,sans-serif" font-size="16" font-weight="700">GATEKEEPER</text>
+  <text x="958" y="452" fill="#FFFFFF" font-family="'Helvetica Neue',Arial,sans-serif" font-size="15" font-weight="700">SIYAOZHENG / 2026</text>
+</svg>

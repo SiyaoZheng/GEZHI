@@ -28,6 +28,10 @@ while the public interface remains unstable.
 
 ### Changed
 
+- Reframed the public repository as GEZHI while retaining `goal-cli` as the
+  stable runtime command and Python package compatibility name.
+- Replaced the goal-cli landing page with a bilingual GEZHI architecture,
+  research-responsibility model, and project visual identity.
 - `tok` passes are expected to leave the configured artifact untouched; the
   producer remains responsible for rebuilding the artifact on the next
   heartbeat, and goal-cli records violations as audit evidence instead of
