@@ -636,6 +636,12 @@ def analyze_config_policy(config: GoalConfig) -> ConfigPolicyReport:
             issues.append(ConfigIssue("observability.endpoint.empty", "observability.endpoint must be non-empty when observability is enabled"))
         if config.observability.timeout_seconds <= 0:
             issues.append(ConfigIssue("observability.timeout_seconds.non_positive", "observability.timeout_seconds must be positive when observability is enabled"))
+    if config.safety.max_history_items < 1:
+        issues.append(ConfigIssue("safety.max_history_items.non_positive", "safety.max_history_items must be at least 1"))
+    if config.safety.max_blocker_repeats < 1:
+        issues.append(ConfigIssue("safety.max_blocker_repeats.non_positive", "safety.max_blocker_repeats must be at least 1"))
+    if config.safety.lock_stale_seconds < 1:
+        issues.append(ConfigIssue("safety.lock_stale_seconds.non_positive", "safety.lock_stale_seconds must be at least 1"))
     if config.perpetual.enabled:
         if config.perpetual.healthy_interval_seconds <= 0:
             issues.append(ConfigIssue("perpetual.healthy_interval_seconds.non_positive", "perpetual.healthy_interval_seconds must be positive"))

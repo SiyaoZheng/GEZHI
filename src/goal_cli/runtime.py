@@ -43,6 +43,7 @@ from .transaction import load_transaction, mark_transaction_checkpointed, recove
 IGNORED_RUNTIME_METADATA_FILENAMES = {".DS_Store", "Thumbs.db", "desktop.ini"}
 IGNORED_RUNTIME_METADATA_DIRNAMES = {".Spotlight-V100", ".TemporaryItems", ".fseventsd"}
 DEFAULT_MAX_MINUTES = 600.0
+LOCK_STALE_MARGIN_SECONDS = 300
 RETIRED_INVALID_REVIEW_STATUSES = {
     "blocked_producer_failed",
     "blocked_artifact_missing",
@@ -213,6 +214,28 @@ class HeartbeatLock:
         except FileNotFoundError:
             pass
 
+    def touch(self) -> None:
+        """Prove liveness so a long pass is not mistaken for an abandoned lock."""
+        if not self.acquired or self.payload is None:
+            return
+        if _read_lock_payload(self.lock_path) != self.payload:
+            return
+        try:
+            os.utime(self.lock_path, None)
+        except OSError:
+            pass
+
+
+def effective_lock_stale_seconds(config: GoalConfig, max_minutes: float) -> int:
+    """A heartbeat allowed to run for N minutes is not stale before N minutes.
+
+    ``safety.lock_stale_seconds`` defaults to 6h while ``--max-minutes``
+    defaults to 600 (10h), so the configured value alone would let a scheduled
+    tick steal the lock from a still-running heartbeat.
+    """
+    budget = int(max(0.0, max_minutes) * 60.0) + LOCK_STALE_MARGIN_SECONDS
+    return max(int(config.safety.lock_stale_seconds), budget)
+
 
 def _read_lock_payload(lock_path: Path) -> dict[str, Any] | None:
     try:
@@ -263,9 +286,12 @@ class HeartbeatRunner:
     run_dir: Path | None = None
     pending_transaction_journal: Path | None = None
     current_attempt_context: AttemptContext | None = None
+    lock: HeartbeatLock | None = None
 
     def run(self) -> RunResult:
-        with HeartbeatLock(self.config.lock_path, self.config.safety.lock_stale_seconds):
+        stale_seconds = effective_lock_stale_seconds(self.config, self.options.max_minutes)
+        with HeartbeatLock(self.config.lock_path, stale_seconds) as lock:
+            self.lock = lock
             self.state = load_state(self.config)
             recovery_result = self._recover_transactions()
             if recovery_result is not None:
@@ -1308,6 +1334,8 @@ class HeartbeatRunner:
         self._recorder().append_event(event, self._run_dir(), artifact)
 
     def _heartbeat(self, phase: str, run_dir: Path | None) -> None:
+        if self.lock is not None:
+            self.lock.touch()
         self._recorder().heartbeat(phase, run_dir)
 
     def _run_dir(self) -> Path:
@@ -1657,7 +1685,7 @@ def append_history(config: GoalConfig, state: dict[str, Any], event: dict[str, A
         history = []
         state["history"] = history
     history.append({"at": now_iso(), **event})
-    del history[:-config.safety.max_history_items]
+    del history[: -max(1, config.safety.max_history_items)]
 
 
 def cleanup_runtime(config: GoalConfig, kill_orphans: bool = False) -> CleanupResult:
@@ -1796,7 +1824,7 @@ def update_heartbeat(config: GoalConfig, state: dict[str, Any], phase: str, run_
 
 def parse_tik_verdict(config: GoalConfig, memo_path: Path) -> tuple[dict[str, Any], bool]:
     memo_text = memo_path.read_text(encoding="utf-8")
-    parsed = extract_json_object(memo_text)
+    parsed = extract_json_object(memo_text, verdict_prefer_keys(config))
     if parsed is None:
         return _parse_error_verdict(config, "Tik did not return parseable JSON.", memo_path), True
     for required_field in config.tik.verdict.required_fields:
@@ -1821,12 +1849,22 @@ def parse_tik_verdict(config: GoalConfig, memo_path: Path) -> tuple[dict[str, An
     return verdict, False
 
 
-def extract_json_object(text: str) -> dict[str, Any] | None:
-    extracted = extract_json_object_with_span(text)
+def extract_json_object(text: str, prefer_keys: tuple[str, ...] = ()) -> dict[str, Any] | None:
+    extracted = extract_json_object_with_span(text, prefer_keys)
     return extracted[0] if extracted else None
 
 
-def extract_json_object_with_span(text: str) -> tuple[dict[str, Any], tuple[int, int]] | None:
+def extract_json_object_with_span(
+    text: str,
+    prefer_keys: tuple[str, ...] = (),
+) -> tuple[dict[str, Any], tuple[int, int]] | None:
+    """Pick the JSON object a reviewer meant as its verdict.
+
+    A review memo often restates the requested shape before answering, so the
+    first parseable object in the text is not reliably the verdict. When
+    ``prefer_keys`` is given, the last object carrying all of those keys wins;
+    otherwise the original first-match order applies.
+    """
     candidates: list[tuple[str, int, int]] = []
     for match in re.finditer(r"```(?:json)?\s*(.*?)\s*```", text, flags=re.DOTALL | re.IGNORECASE):
         candidates.append((match.group(1).strip(), match.start(0), match.end(0)))
@@ -1838,19 +1876,31 @@ def extract_json_object_with_span(text: str) -> tuple[dict[str, Any], tuple[int,
     end = text.rfind("}")
     if start != -1 and end > start:
         candidates.append((text[start : end + 1], start, end + 1))
+    parsed_candidates: list[tuple[dict[str, Any], tuple[int, int]]] = []
     for candidate, span_start, span_end in candidates:
         try:
             parsed = json.loads(candidate)
         except json.JSONDecodeError:
             continue
         if isinstance(parsed, dict):
-            return parsed, (span_start, span_end)
-    return None
+            parsed_candidates.append((parsed, (span_start, span_end)))
+    if not parsed_candidates:
+        return None
+    if prefer_keys:
+        preferred = [item for item in parsed_candidates if all(key in item[0] for key in prefer_keys)]
+        if preferred:
+            return max(preferred, key=lambda item: item[1][0])
+    return parsed_candidates[0]
+
+
+def verdict_prefer_keys(config: GoalConfig) -> tuple[str, ...]:
+    # Select the reviewer's last attempted verdict first, then let
+    # parse_tik_verdict() report any missing required fields from that object.
+    return (config.tik.verdict.ready_field,)
 
 
 def tik_handoff_text(config: GoalConfig, text: str) -> str:
-    _ = config
-    extracted = extract_json_object_with_span(text)
+    extracted = extract_json_object_with_span(text, verdict_prefer_keys(config))
     if extracted:
         _, (start, end) = extracted
         text = f"{text[:start]}{text[end:]}"

@@ -55,7 +55,20 @@ class CrashSafeTransactionTests(unittest.TestCase):
 
             mark_transaction_checkpointed(journal_path)
             mark_transaction_checkpointed(journal_path)
-            self.assertEqual(load_transaction(journal_path)["status"], "CHECKPOINTED")
+            checkpointed = load_transaction(journal_path)
+            self.assertEqual(checkpointed["status"], "CHECKPOINTED")
+            self.assertNotIn("baseline", checkpointed)
+            self.assertTrue(checkpointed["baseline_pruned"])
+            self.assertEqual(
+                [(item["operation"], item["path"]) for item in checkpointed["mutations"]],
+                [
+                    ("create", "create.txt"),
+                    ("delete", "delete.txt"),
+                    ("modify", "modify.txt"),
+                    ("rename", "new-name.txt"),
+                ],
+            )
+            self.assertFalse((journal_path.parent / "staged").exists())
 
     def test_recovery_is_idempotent_across_every_applying_boundary(self) -> None:
         for crash_index in range(5):

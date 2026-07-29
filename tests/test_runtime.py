@@ -12,7 +12,19 @@ from unittest import mock
 
 from goal_cli.adapters import api_tik_client_options, build_api_tik_prompt, effective_api_tik_model, run_tik
 from goal_cli.config import DEFAULT_API_TIK_BASE_URL, DEFAULT_API_TIK_MODEL, ConfigError, TikConfig, TokConfig, load_config, validate_config
-from goal_cli.runtime import DEFAULT_MAX_MINUTES, HeartbeatLock, RuntimeOptions, cleanup_runtime, load_state, run_heartbeat, run_goal
+from goal_cli.runtime import (
+    DEFAULT_MAX_MINUTES,
+    HeartbeatLock,
+    RuntimeOptions,
+    cleanup_runtime,
+    effective_lock_stale_seconds,
+    extract_json_object,
+    load_state,
+    parse_tik_verdict,
+    run_heartbeat,
+    run_goal,
+    tik_handoff_text,
+)
 from goal_cli.tok_execution import build_claude_code_goal_tok_plan, build_codex_app_server_tok_plan, build_codex_goal_tok_plan, execute_tok
 
 
@@ -31,6 +43,102 @@ class GoalRuntimeTests(unittest.TestCase):
                 self.assertTrue(lock_path.exists())
 
             self.assertFalse(lock_path.exists())
+
+    def test_lock_stale_window_covers_the_configured_run_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self._write_basic_project(root)
+            config = load_config(root / "goal.toml")
+
+            self.assertEqual(config.safety.lock_stale_seconds, 6 * 60 * 60)
+            self.assertGreater(
+                effective_lock_stale_seconds(config, DEFAULT_MAX_MINUTES),
+                DEFAULT_MAX_MINUTES * 60,
+            )
+            self.assertEqual(effective_lock_stale_seconds(config, 5.0), config.safety.lock_stale_seconds)
+
+    def test_heartbeat_lock_touch_refreshes_only_an_owned_lock(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            lock_path = Path(temp_dir) / ".goal" / ".heartbeat.lock"
+            with HeartbeatLock(lock_path, stale_seconds=60) as lock:
+                os.utime(lock_path, (0, 0))
+                lock.touch()
+                self.assertGreater(lock_path.stat().st_mtime, 0)
+
+                foreign = {"pid": os.getpid(), "created_at": "2026-07-04T00:00:00+00:00", "token": "foreign"}
+                lock_path.write_text(json.dumps(foreign) + "\n", encoding="utf-8")
+                os.utime(lock_path, (0, 0))
+                lock.touch()
+                self.assertEqual(int(lock_path.stat().st_mtime), 0)
+                lock_path.write_text(json.dumps(lock.payload) + "\n", encoding="utf-8")
+
+    def test_verdict_extraction_prefers_the_object_carrying_the_verdict_field(self) -> None:
+        memo = (
+            "Answer with this shape:\n\n"
+            "```json\n{\"artifact_ready\": true}\n```\n\n"
+            "The bibliography is still broken.\n\n"
+            "```json\n{\"artifact_ready\": false, \"reviewed_sha256\": \"abc\"}\n```\n"
+        )
+
+        self.assertEqual(extract_json_object(memo), {"artifact_ready": True})
+        self.assertEqual(
+            extract_json_object(memo, ("artifact_ready",)),
+            {"artifact_ready": False, "reviewed_sha256": "abc"},
+        )
+
+    def test_incomplete_final_verdict_is_not_replaced_by_a_complete_schema_example(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self._write_basic_project(root)
+            config_path = root / "goal.toml"
+            config_path.write_text(
+                config_path.read_text(encoding="utf-8").replace(
+                    'required_fields = ["artifact_ready"]',
+                    'required_fields = ["artifact_ready", "blocking_objections"]',
+                ),
+                encoding="utf-8",
+            )
+            config = load_config(config_path)
+            memo_path = root / "tik_memo.md"
+            memo_path.write_text(
+                "Answer with this shape:\n\n"
+                '```json\n{"artifact_ready": true, "blocking_objections": []}\n```\n\n'
+                "The artifact is not ready.\n\n"
+                '```json\n{"artifact_ready": false}\n```\n',
+                encoding="utf-8",
+            )
+
+            verdict, parse_error = parse_tik_verdict(config, memo_path)
+
+            self.assertTrue(parse_error)
+            self.assertFalse(verdict["artifact_ready"])
+            self.assertEqual(verdict["error"], "Tik JSON missing required field: blocking_objections")
+
+    def test_handoff_removes_the_same_incomplete_final_verdict_that_was_parsed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self._write_basic_project(root)
+            config_path = root / "goal.toml"
+            config_path.write_text(
+                config_path.read_text(encoding="utf-8").replace(
+                    'required_fields = ["artifact_ready"]',
+                    'required_fields = ["artifact_ready", "blocking_objections"]',
+                ),
+                encoding="utf-8",
+            )
+            config = load_config(config_path)
+            memo_text = (
+                "Answer with this shape:\n\n"
+                '```json\n{"artifact_ready": true, "blocking_objections": []}\n```\n\n'
+                "The artifact is not ready.\n\n"
+                '```json\n{"artifact_ready": false}\n```\n'
+            )
+
+            handoff = tik_handoff_text(config, memo_text)
+
+            self.assertIn('{"artifact_ready": true, "blocking_objections": []}', handoff)
+            self.assertIn("The artifact is not ready.", handoff)
+            self.assertNotIn('{"artifact_ready": false}', handoff)
 
     def test_heartbeat_lock_exit_only_releases_owned_lock(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
