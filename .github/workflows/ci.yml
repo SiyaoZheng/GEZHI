@@ -49,3 +49,96 @@ jobs:
 
       - name: Test
         run: python -m pytest -q
+
+  package:
+    name: Build and smoke-test distribution artifacts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Build and check wheel and source distribution
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build twine
+          python -m build
+          python -m twine check dist/*
+
+      - name: Smoke-test the wheel in a fresh environment
+        run: |
+          venv_dir="${RUNNER_TEMP}/gezhi-wheel-smoke"
+          python -m venv "$venv_dir"
+          "$venv_dir/bin/python" -m pip install --upgrade pip
+          "$venv_dir/bin/python" -m pip install dist/*.whl
+          "$venv_dir/bin/gezhi" --help
+          "$venv_dir/bin/python" -m gezhi --help
+
+          legacy_bin="${venv_dir}/bin/goal""-cli"
+          test ! -e "$legacy_bin"
+
+          project_dir="${RUNNER_TEMP}/gezhi-init-smoke"
+          mkdir -p "$project_dir"
+          (
+            cd "$project_dir"
+            "$venv_dir/bin/gezhi" init
+          )
+          test -f "$project_dir/gezhi.toml"
+          legacy_config="${project_dir}/goal"".toml"
+          test ! -e "$legacy_config"
+
+          "$venv_dir/bin/python" - <<'PY'
+          from importlib import metadata, util
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          import gezhi
+
+          distribution = metadata.distribution("gezhi")
+          scripts = sorted(
+              entry.name
+              for entry in distribution.entry_points
+              if entry.group == "console_scripts"
+          )
+          assert scripts == ["gezhi"], scripts
+          assert distribution.version == gezhi.__version__
+
+          legacy_module = "goal" + "_cli"
+          assert util.find_spec(legacy_module) is None
+          try:
+              metadata.distribution("goal" + "-cli")
+          except metadata.PackageNotFoundError:
+              pass
+          else:
+              raise AssertionError("pre-GEZHI distribution is still installed")
+
+          wheel = next(Path("dist").glob("*.whl"))
+          legacy_prefix = legacy_module + "/"
+          with ZipFile(wheel) as archive:
+              assert not any(name.startswith(legacy_prefix) for name in archive.namelist())
+          PY
+
+      - name: Smoke-test the source distribution without Git metadata
+        run: |
+          venv_dir="${RUNNER_TEMP}/gezhi-sdist-smoke"
+          extract_dir="${RUNNER_TEMP}/gezhi-sdist-source"
+          python -m venv "$venv_dir"
+          "$venv_dir/bin/python" -m pip install --upgrade pip
+          "$venv_dir/bin/python" -m pip install dist/*.tar.gz pytest
+          "$venv_dir/bin/python" -m gezhi --help
+
+          mkdir -p "$extract_dir"
+          tar -xzf dist/*.tar.gz -C "$extract_dir"
+          source_dir="$(find "$extract_dir" -mindepth 1 -maxdepth 1 -type d -print -quit)"
+          (
+            cd "$source_dir"
+            "$venv_dir/bin/python" -m pytest -q \
+              tests/test_brand_identity.py \
+              tests/test_skill_distribution.py
+          )

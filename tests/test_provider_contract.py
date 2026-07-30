@@ -5,16 +5,16 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 
-from goal_cli.config import TokConfig
-from goal_cli.lease import CapabilityLease
-from goal_cli.lifecycle import CallState, WorkState
-from goal_cli.provider_contract import (
+from gezhi.config import TokConfig
+from gezhi.lease import CapabilityLease
+from gezhi.lifecycle import CallState, WorkState
+from gezhi.provider_contract import (
     native_provider_policy,
     preflight_tok_provider,
     supervisor_transition,
 )
-from goal_cli.supervisor import AttemptOutcomeKind
-from goal_cli.tok_execution import (
+from gezhi.supervisor import AttemptOutcomeKind
+from gezhi.tok_execution import (
     build_claude_code_goal_tok_plan,
     build_codex_app_server_tok_plan,
     build_codex_goal_tok_plan,
@@ -145,7 +145,7 @@ class ProviderContractTests(unittest.TestCase):
             base = Path(temp_dir)
             isolated = base / "isolated"
             canonical_run = base / "canonical-run"
-            attachments = isolated / ".goal" / "runs" / "attempt" / "attachments"
+            attachments = isolated / ".gezhi" / "runs" / "attempt" / "attachments"
             victim = base / "victim.txt"
             (isolated / "src").mkdir(parents=True)
             attachments.mkdir(parents=True)

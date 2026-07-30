@@ -8,8 +8,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from goal_cli.config import load_config
-from goal_cli.observability import LocalJsonlSpanExporter, plan_observability_export
+from gezhi.config import load_config
+from gezhi.observability import LocalJsonlSpanExporter, plan_observability_export
 
 
 class ObservabilityTests(unittest.TestCase):
@@ -40,22 +40,22 @@ class ObservabilityTests(unittest.TestCase):
 
     def test_jsonl_exporter_writes_agent_readable_spans(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            trace_path = Path(temp_dir) / ".goal" / "observability" / "traces.jsonl"
+            trace_path = Path(temp_dir) / ".gezhi" / "observability" / "traces.jsonl"
 
             from opentelemetry.sdk.trace import TracerProvider
             from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 
             provider = TracerProvider()
             provider.add_span_processor(SimpleSpanProcessor(LocalJsonlSpanExporter(trace_path)))
-            tracer = provider.get_tracer("goal_cli.tests")
-            with tracer.start_as_current_span("goal_cli.test", attributes={"goal.iteration": 2}) as span:
+            tracer = provider.get_tracer("gezhi.tests")
+            with tracer.start_as_current_span("gezhi.test", attributes={"goal.iteration": 2}) as span:
                 span.add_event("checkpoint", {"phase": "tok"})
             provider.shutdown()
 
             lines = trace_path.read_text(encoding="utf-8").splitlines()
             self.assertEqual(len(lines), 1)
             payload = json.loads(lines[0])
-            self.assertEqual(payload["name"], "goal_cli.test")
+            self.assertEqual(payload["name"], "gezhi.test")
             self.assertEqual(payload["attributes"]["goal.iteration"], 2)
             self.assertEqual(payload["events"][0]["name"], "checkpoint")
             self.assertEqual(payload["events"][0]["attributes"]["phase"], "tok")
@@ -66,8 +66,8 @@ class ObservabilityTests(unittest.TestCase):
         (root / "output").mkdir()
         config = f"""
 name = "observability-test"
-state_dir = ".goal"
-runs_dir = ".goal/runs"
+state_dir = ".gezhi"
+runs_dir = ".gezhi/runs"
 
 [artifact]
 path = "output/artifact.txt"
@@ -100,7 +100,7 @@ timeout_seconds = 0.01
 [safety]
 generated_dirs = ["output", "build"]
 """
-        config_path = root / "goal.toml"
+        config_path = root / "gezhi.toml"
         config_path.write_text(textwrap.dedent(config).strip() + "\n", encoding="utf-8")
         return config_path
 

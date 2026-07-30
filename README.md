@@ -33,10 +33,6 @@
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-1C1C1C?style=for-the-badge" /></a>
 </p>
 
-> [!NOTE]
-> **GEZHI is the public project.** The runtime command and Python package remain
-> named **`goal-cli`** so existing projects do not break.
-
 ## Why GEZHI
 
 AI can retrieve literature, organize evidence, clean data, write code, and
@@ -58,7 +54,7 @@ flowchart TB
     GE["格 · review<br/>whole-paper judgment · root diagnosis · bounded brief"]
     ZHI["致 · revise<br/>authorized edits · rebuild · return evidence"]
     S["AI4SS research skill layer<br/>design · evidence · analysis · writing"]
-    C["goal-cli control plane<br/>produce · review · route · repeat"]
+    C["GEZHI control plane<br/>produce · review · route · repeat"]
     A["Paper + code + data + provenance"]
 
     R --> G
@@ -75,7 +71,7 @@ flowchart TB
 | --- | --- |
 | **Research architecture** | The researcher decides what matters, plans the research path, and guards evidentiary and inferential boundaries. |
 | **Scholarly capability** | The AI4SS skill layer supports research design, evidence construction, analysis review, and academic writing. |
-| **Control plane** | `goal-cli` rebuilds the artifact, requests review, persists the decision, and schedules the next bounded pass. |
+| **Control plane** | `gezhi` rebuilds the artifact, requests review, persists the decision, and schedules the next bounded pass. |
 
 ## 格 and 致
 
@@ -102,8 +98,8 @@ flowchart TB
 Install the current GEZHI control plane from this repository:
 
 ```bash
-python3 -m pip install "goal-cli[openai] @ git+https://github.com/SiyaoZheng/GEZHI.git"
-goal-cli --help
+python3 -m pip install "gezhi[openai] @ git+https://github.com/SiyaoZheng/GEZHI.git"
+gezhi --help
 ```
 
 Then give your coding agent one entrypoint:
@@ -112,30 +108,37 @@ Then give your coding agent one entrypoint:
 Read https://github.com/SiyaoZheng/GEZHI/blob/main/llms.txt and configure this project as a GEZHI research loop.
 ```
 
-For a first run, inspect the generated configuration before allowing an agent
-to edit research source:
+For a manual first run, create and edit the starter configuration before
+allowing an agent to edit research source:
 
 ```bash
-goal-cli validate
-goal-cli doctor
-goal-cli run --dry-run
+gezhi init
+# Edit gezhi.toml: set the artifact, producer, review, and writable source scopes.
+gezhi validate
+gezhi doctor
+gezhi run --dry-run
 ```
 
 ## Current Implementation
 
-This repository currently ships the control-plane implementation used by
-GEZHI. The compatibility name `goal-cli` remains visible in commands, package
-paths, and configuration.
+This repository ships GEZHI as one canonical Python distribution, import
+package, and command: `gezhi`. Project configuration lives in `gezhi.toml`, and
+runtime state lives under `.gezhi/`.
+
+The runtime names the review role `tik` and the bounded source-repair role
+`tok`. In the GEZHI architecture, those mechanisms support `格` and `致`
+respectively; they are role names, not separate products.
 
 | Path | Role in GEZHI |
 | --- | --- |
-| [`src/goal_cli/`](src/goal_cli/) | Persistent artifact-first control loop |
-| [`goal-cli-project-setup`](skills/goal-cli-project-setup/SKILL.md) | Connect an existing research project to the GEZHI control loop |
-| [`goal-cli-template-author`](skills/goal-cli-template-author/SKILL.md) | Improve reusable project templates, checks, and examples |
+| [`src/gezhi/`](src/gezhi/) | Persistent artifact-first control loop |
+| [`gezhi-project-setup`](skills/gezhi-project-setup/SKILL.md) | Connect an existing research project to the GEZHI control loop |
+| [`gezhi-template-author`](skills/gezhi-template-author/SKILL.md) | Improve reusable project templates, checks, and examples |
 | [`examples/scientificity/`](examples/scientificity/) | Empirical-paper example with executable checks |
-| [`docs/config-schema.md`](docs/config-schema.md) | Full `goal.toml` contract |
+| [`docs/config-schema.md`](docs/config-schema.md) | Full `gezhi.toml` contract |
 | [`docs/cli-reference.md`](docs/cli-reference.md) | Current command reference |
-| [`docs/artifact-goal-notes.md`](docs/artifact-goal-notes.md) | Control-plane design rationale |
+| [`docs/architecture.md`](docs/architecture.md) | Control-plane design rationale |
+| [`docs/migration.md`](docs/migration.md) | Hard-cut migration from the earlier runtime identity |
 
 ## Non-negotiables
 

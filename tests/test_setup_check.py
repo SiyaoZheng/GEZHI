@@ -8,8 +8,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from goal_cli.config import API_TIK_KEY_ENV_VARS, DEFAULT_API_TIK_MODEL, load_config
-from goal_cli.setup_check import DoctorOptions, doctor_exit_code, run_doctor
+from gezhi.config import API_TIK_KEY_ENV_VARS, DEFAULT_API_TIK_MODEL, load_config
+from gezhi.setup_check import DoctorOptions, doctor_exit_code, run_doctor
 
 
 class SetupCheckTests(unittest.TestCase):
@@ -19,10 +19,10 @@ class SetupCheckTests(unittest.TestCase):
             self._write_project(root)
             self._install_fake_codex(root)
 
-            checks = run_doctor(load_config(root / "goal.toml"))
+            checks = run_doctor(load_config(root / "gezhi.toml"))
 
             self.assertEqual(doctor_exit_code(checks), 0, checks)
-            self.assertEqual(self._detail(checks, "static_setup"), "static setup ready for goal-cli run")
+            self.assertEqual(self._detail(checks, "static_setup"), "static setup ready for gezhi run")
             self.assertIn("not proven", self._detail(checks, "one_click_artifact_loop"))
 
     def test_doctor_fails_when_codex_exec_lacks_goal_feature(self) -> None:
@@ -31,7 +31,7 @@ class SetupCheckTests(unittest.TestCase):
             self._write_project(root)
             self._install_fake_codex(root, include_goal_flags=False)
 
-            checks = run_doctor(load_config(root / "goal.toml"))
+            checks = run_doctor(load_config(root / "gezhi.toml"))
 
             self.assertEqual(doctor_exit_code(checks), 1)
             self.assertIn("does not show --enable", self._detail(checks, "codex.exec.--enable"))
@@ -43,7 +43,7 @@ class SetupCheckTests(unittest.TestCase):
             self._write_project(root, producer_command="missing-producer scripts/produce.py")
             self._install_fake_codex(root)
 
-            checks = run_doctor(load_config(root / "goal.toml"))
+            checks = run_doctor(load_config(root / "gezhi.toml"))
 
             self.assertEqual(doctor_exit_code(checks), 1)
             self.assertIn("command executable not found", self._detail(checks, "producer.command"))
@@ -53,22 +53,22 @@ class SetupCheckTests(unittest.TestCase):
             root = Path(temp_dir)
             self._write_project(root, tik_provider="api")
             self._install_fake_codex(root)
-            self.assertEqual(load_config(root / "goal.toml").tik.model, DEFAULT_API_TIK_MODEL)
+            self.assertEqual(load_config(root / "gezhi.toml").tik.model, DEFAULT_API_TIK_MODEL)
 
             old_api_keys = {name: os.environ.pop(name, None) for name in API_TIK_KEY_ENV_VARS}
-            old_env_file = os.environ.get("GOAL_CLI_API_ENV_FILE")
-            os.environ["GOAL_CLI_API_ENV_FILE"] = str(root / "missing-api.env")
+            old_env_file = os.environ.get("GEZHI_API_ENV_FILE")
+            os.environ["GEZHI_API_ENV_FILE"] = str(root / "missing-api.env")
             try:
-                with mock.patch("goal_cli.setup_check.importlib.util.find_spec", return_value=None):
-                    checks = run_doctor(load_config(root / "goal.toml"))
+                with mock.patch("gezhi.setup_check.importlib.util.find_spec", return_value=None):
+                    checks = run_doctor(load_config(root / "gezhi.toml"))
             finally:
                 for name, value in old_api_keys.items():
                     if value is not None:
                         os.environ[name] = value
                 if old_env_file is None:
-                    os.environ.pop("GOAL_CLI_API_ENV_FILE", None)
+                    os.environ.pop("GEZHI_API_ENV_FILE", None)
                 else:
-                    os.environ["GOAL_CLI_API_ENV_FILE"] = old_env_file
+                    os.environ["GEZHI_API_ENV_FILE"] = old_env_file
 
             self.assertEqual(doctor_exit_code(checks), 1)
             self.assertIn("not installed", self._detail(checks, "openai.package"))
@@ -82,9 +82,9 @@ class SetupCheckTests(unittest.TestCase):
             env_file = root / "api.env"
             env_file.write_text("PACKYAPI_API_KEY=file-packy-key\n", encoding="utf-8")
 
-            with mock.patch.dict(os.environ, {"GOAL_CLI_API_ENV_FILE": str(env_file)}, clear=False):
-                with mock.patch("goal_cli.setup_check.importlib.util.find_spec", return_value=object()):
-                    checks = run_doctor(load_config(root / "goal.toml"))
+            with mock.patch.dict(os.environ, {"GEZHI_API_ENV_FILE": str(env_file)}, clear=False):
+                with mock.patch("gezhi.setup_check.importlib.util.find_spec", return_value=object()):
+                    checks = run_doctor(load_config(root / "gezhi.toml"))
 
             self.assertIn("PACKYAPI_API_KEY is set", self._detail(checks, "openai.auth"))
 
@@ -94,7 +94,7 @@ class SetupCheckTests(unittest.TestCase):
             self._write_project(root)
             self._install_fake_codex(root, include_ephemeral=False)
 
-            checks = run_doctor(load_config(root / "goal.toml"))
+            checks = run_doctor(load_config(root / "gezhi.toml"))
 
             self.assertEqual(doctor_exit_code(checks), 0, checks)
 
@@ -103,7 +103,7 @@ class SetupCheckTests(unittest.TestCase):
             self._write_project(root, tik_provider="codex_file")
             self._install_fake_codex(root, include_ephemeral=False)
 
-            checks = run_doctor(load_config(root / "goal.toml"))
+            checks = run_doctor(load_config(root / "gezhi.toml"))
 
             self.assertEqual(doctor_exit_code(checks), 1)
             self.assertIn("does not show --ephemeral", self._detail(checks, "codex.exec.--ephemeral"))
@@ -114,7 +114,7 @@ class SetupCheckTests(unittest.TestCase):
             root = Path(temp_dir)
             self._write_project(root)
             self._install_fake_codex(root)
-            config_path = root / "goal.toml"
+            config_path = root / "gezhi.toml"
             config_path.write_text(
                 config_path.read_text(encoding="utf-8").replace(
                     '[tik]\nprovider = "oracle"\ncommand = "python3 scripts/tik.py"',
@@ -148,7 +148,7 @@ class SetupCheckTests(unittest.TestCase):
             self._write_project(root, tik_provider="checklist")
             self._install_fake_codex(root)
 
-            checks = run_doctor(load_config(root / "goal.toml"))
+            checks = run_doctor(load_config(root / "gezhi.toml"))
 
             self.assertEqual(doctor_exit_code(checks), 0, checks)
             self.assertIn("command executable found", self._detail(checks, "tik.command"))
@@ -161,11 +161,11 @@ class SetupCheckTests(unittest.TestCase):
             project_source = root / "src" / "source.txt"
             before = project_source.read_text(encoding="utf-8")
 
-            checks = run_doctor(load_config(root / "goal.toml"), DoctorOptions(smoke_codex_goal=True))
+            checks = run_doctor(load_config(root / "gezhi.toml"), DoctorOptions(smoke_codex_goal=True))
 
             self.assertEqual(doctor_exit_code(checks), 0, checks)
             self.assertIn("temporary source change", self._detail(checks, "codex_goal.smoke"))
-            self.assertEqual(self._detail(checks, "one_click_artifact_loop"), "ready for one-prompt goal-cli run")
+            self.assertEqual(self._detail(checks, "one_click_artifact_loop"), "ready for one-prompt gezhi run")
             self.assertEqual(project_source.read_text(encoding="utf-8"), before)
 
     def test_codex_app_server_smoke_uses_temp_workspace_and_edits_source(self) -> None:
@@ -176,13 +176,13 @@ class SetupCheckTests(unittest.TestCase):
             project_source = root / "src" / "source.txt"
             before = project_source.read_text(encoding="utf-8")
 
-            checks = run_doctor(load_config(root / "goal.toml"), DoctorOptions(smoke_codex_app_server=True))
+            checks = run_doctor(load_config(root / "gezhi.toml"), DoctorOptions(smoke_codex_app_server=True))
 
             self.assertEqual(doctor_exit_code(checks), 0, checks)
             self.assertIn("codex app-server --help succeeded", self._detail(checks, "codex.app_server.help"))
             self.assertIn("codex app-server supports --stdio", self._detail(checks, "codex.app_server.--stdio"))
             self.assertIn("temporary source change", self._detail(checks, "codex_app_server.smoke"))
-            self.assertEqual(self._detail(checks, "one_click_artifact_loop"), "ready for one-prompt goal-cli run")
+            self.assertEqual(self._detail(checks, "one_click_artifact_loop"), "ready for one-prompt gezhi run")
             self.assertEqual(project_source.read_text(encoding="utf-8"), before)
 
     def test_codex_file_tik_smoke_uses_temp_artifact_and_validates_verdict(self) -> None:
@@ -194,13 +194,13 @@ class SetupCheckTests(unittest.TestCase):
             before = project_source.read_text(encoding="utf-8")
 
             checks = run_doctor(
-                load_config(root / "goal.toml"),
+                load_config(root / "gezhi.toml"),
                 DoctorOptions(smoke_codex_goal=True, smoke_codex_file_tik=True),
             )
 
             self.assertEqual(doctor_exit_code(checks), 0, checks)
             self.assertIn("parseable current-artifact verdict", self._detail(checks, "codex_file_tik.smoke"))
-            self.assertEqual(self._detail(checks, "one_click_artifact_loop"), "ready for one-prompt goal-cli run")
+            self.assertEqual(self._detail(checks, "one_click_artifact_loop"), "ready for one-prompt gezhi run")
             self.assertEqual(project_source.read_text(encoding="utf-8"), before)
 
     def test_claude_code_file_tik_smoke_uses_temp_artifact_and_validates_verdict(self) -> None:
@@ -213,7 +213,7 @@ class SetupCheckTests(unittest.TestCase):
             before = project_source.read_text(encoding="utf-8")
 
             checks = run_doctor(
-                load_config(root / "goal.toml"),
+                load_config(root / "gezhi.toml"),
                 DoctorOptions(smoke_codex_goal=True, smoke_claude_code_file_tik=True),
             )
 
@@ -221,7 +221,7 @@ class SetupCheckTests(unittest.TestCase):
             self.assertIn("claude found at", self._detail(checks, "claude.binary"))
             self.assertIn("claude supports --print", self._detail(checks, "claude.--print"))
             self.assertIn("parseable current-artifact verdict", self._detail(checks, "claude_code_file_tik.smoke"))
-            self.assertEqual(self._detail(checks, "one_click_artifact_loop"), "ready for one-prompt goal-cli run")
+            self.assertEqual(self._detail(checks, "one_click_artifact_loop"), "ready for one-prompt gezhi run")
             self.assertEqual(project_source.read_text(encoding="utf-8"), before)
 
     def test_claude_code_goal_smoke_uses_temp_workspace_and_edits_source(self) -> None:
@@ -233,7 +233,7 @@ class SetupCheckTests(unittest.TestCase):
             before = project_source.read_text(encoding="utf-8")
 
             checks = run_doctor(
-                load_config(root / "goal.toml"),
+                load_config(root / "gezhi.toml"),
                 DoctorOptions(smoke_claude_code_goal=True),
             )
 
@@ -241,7 +241,7 @@ class SetupCheckTests(unittest.TestCase):
             self.assertIn("claude found at", self._detail(checks, "claude.binary"))
             self.assertNotIn("claude.--json-schema", [check.name for check in checks])
             self.assertIn("temporary source change", self._detail(checks, "claude_code_goal.smoke"))
-            self.assertEqual(self._detail(checks, "one_click_artifact_loop"), "ready for one-prompt goal-cli run")
+            self.assertEqual(self._detail(checks, "one_click_artifact_loop"), "ready for one-prompt gezhi run")
             self.assertEqual(project_source.read_text(encoding="utf-8"), before)
             self.assertNotIn("codex.binary", [check.name for check in checks])
 
@@ -252,7 +252,7 @@ class SetupCheckTests(unittest.TestCase):
             self._install_fake_codex(root)
             self._install_fake_claude(root, include_disallowed_tools=False)
 
-            checks = run_doctor(load_config(root / "goal.toml"))
+            checks = run_doctor(load_config(root / "gezhi.toml"))
 
             self.assertEqual(doctor_exit_code(checks), 1)
             self.assertIn("does not show --disallowedTools", self._detail(checks, "claude.--disallowedTools"))
@@ -282,7 +282,7 @@ class SetupCheckTests(unittest.TestCase):
                 encoding="utf-8",
             )
             fake_no_mistakes.chmod(0o755)
-            config_path = root / "goal.toml"
+            config_path = root / "gezhi.toml"
             config_path.write_text(
                 config_path.read_text(encoding="utf-8").replace(
                     "[no_mistakes]\nenabled = false",
@@ -348,8 +348,8 @@ class SetupCheckTests(unittest.TestCase):
             ).strip()
         config = f'''
 name = "setup-check-test"
-state_dir = ".goal"
-runs_dir = ".goal/runs"
+state_dir = ".gezhi"
+runs_dir = ".gezhi/runs"
 
 [artifact]
 path = "output/artifact"
@@ -379,7 +379,7 @@ enabled = false
 [safety]
 generated_dirs = ["output", "build"]
 '''
-        (root / "goal.toml").write_text(config, encoding="utf-8")
+        (root / "gezhi.toml").write_text(config, encoding="utf-8")
 
     def _install_fake_codex(self, root: Path, include_goal_flags: bool = True, include_ephemeral: bool = True) -> None:
         bin_dir = root / "bin"
@@ -416,17 +416,20 @@ generated_dirs = ["output", "build"]
                         request_id = message["id"]
                         params = message.get("params") or {{}}
                         if method == "initialize":
+                            assert params["clientInfo"]["name"] == "gezhi"
                             respond(request_id, {{"userAgent": "fake-codex-app-server"}})
                         elif method == "thread/start":
                             assert params["approvalPolicy"] == "never"
                             assert params["ephemeral"] is False
+                            assert params["serviceName"] == "gezhi"
+                            assert params["threadSource"] == "gezhi-tok"
                             respond(request_id, {{"thread": {{"id": "thread-1"}}}})
                         elif method == "thread/goal/set":
                             assert params["threadId"] == "thread-1"
                             respond(request_id, {{"goal": {{"threadId": "thread-1", "objective": params["objective"], "status": "active"}}}})
                         elif method == "turn/start":
                             assert "outputSchema" not in params
-                            assert "Doctor smoke check for goal-cli setup readiness" in params["input"][0]["text"]
+                            assert "Doctor smoke check for GEZHI setup readiness" in params["input"][0]["text"]
                             Path(params["cwd"], "doctor-smoke.txt").write_text("ok\\n", encoding="utf-8")
                             respond(request_id, {{"turn": {{"id": "turn-1", "status": "inProgress", "items": []}}}})
                             print(json.dumps({{
@@ -445,7 +448,7 @@ generated_dirs = ["output", "build"]
                     assert "--enable" in args and "goals" in args
                     prompt = sys.stdin.read()
                     assert prompt.startswith("/goal\\n")
-                    assert "Doctor smoke check for goal-cli setup readiness" in prompt
+                    assert "Doctor smoke check for GEZHI setup readiness" in prompt
                     (workspace / "doctor-smoke.txt").write_text("ok\\n", encoding="utf-8")
                     print("assistant final")
                     print("Done.")
@@ -460,7 +463,7 @@ generated_dirs = ["output", "build"]
                 assert "--ephemeral" in args
                 assert sorted(path.name for path in workspace.iterdir()) == ["doctor-artifact.txt"]
                 prompt = sys.stdin.read()
-                assert "Doctor smoke check for goal-cli codex_file tik readiness" in prompt
+                assert "Doctor smoke check for GEZHI codex_file tik readiness" in prompt
                 assert "doctor-artifact.txt" in prompt
                 output_path.write_text(json.dumps({{
                     "artifact_ready": False
@@ -505,7 +508,7 @@ generated_dirs = ["output", "build"]
                     add_dirs = [args[index + 1] for index, arg in enumerate(args) if arg == "--add-dir"]
                     assert any(path.endswith("attachments") for path in add_dirs)
                     prompt = sys.stdin.read()
-                    assert "Doctor smoke check for goal-cli setup readiness" in prompt
+                    assert "Doctor smoke check for GEZHI setup readiness" in prompt
                     (Path.cwd() / "doctor-smoke.txt").write_text("ok\\n", encoding="utf-8")
                     print(json.dumps({{"type": "result", "subtype": "success", "is_error": False, "result": "done"}}))
                     raise SystemExit(0)
@@ -515,7 +518,7 @@ generated_dirs = ["output", "build"]
                 workspace = Path.cwd()
                 assert sorted(path.name for path in workspace.iterdir()) == ["doctor-artifact.txt"]
                 prompt = sys.stdin.read()
-                assert "Doctor smoke check for goal-cli claude_code_file tik readiness" in prompt
+                assert "Doctor smoke check for GEZHI claude_code_file tik readiness" in prompt
                 assert "doctor-artifact.txt" in prompt
                 memo = json.dumps({{
                     "artifact_ready": False

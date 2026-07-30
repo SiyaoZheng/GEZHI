@@ -1,14 +1,14 @@
-# goal.toml Schema
+# gezhi.toml Schema
 
-`goal.toml` defines one thing-centered goal. The runtime state belongs under
-`.goal/`; the finished thing is the only success standard.
+`gezhi.toml` defines one thing-centered goal. The runtime state belongs under
+`.gezhi/`; the finished thing is the only success standard.
 
 ## Top-Level Fields
 
 ```toml
 name = "artifact-goal"
-state_dir = ".goal"
-runs_dir = ".goal/runs"
+state_dir = ".gezhi"
+runs_dir = ".gezhi/runs"
 
 [project]
 root = "."
@@ -19,7 +19,7 @@ root = "."
 - `runs_dir`: per-heartbeat logs, prompts, verdicts, schemas, and reports.
 - `[project].root`: optional project root. Relative paths in the rest of the
   config resolve from this root; it defaults to the directory containing
-  `goal.toml`.
+  `gezhi.toml`.
 
 ## Artifact
 
@@ -55,9 +55,9 @@ command = "python3 scripts/tik.py"
 Use `oracle` for deterministic scripts, tests, metrics, or other machine
 checks. The command receives:
 
-- `GOAL_ARTIFACT`
-- `GOAL_TIK_PROMPT`
-- `GOAL_RUN_DIR`
+- `GEZHI_ARTIFACT`
+- `GEZHI_TIK_PROMPT`
+- `GEZHI_RUN_DIR`
 
 ```toml
 [tik]
@@ -91,13 +91,13 @@ critique, then uploads it through the Responses API as an `input_file`.
 API credentials are resolved in this order:
 
 - `PACKYAPI_API_KEY`, `PACKYCODE_CODEX_KEY`, then `OPENAI_API_KEY`;
-- `~/.config/goal-cli/api.env` with one of those names;
-- an explicit `GOAL_CLI_API_ENV_FILE` path, which replaces the default file.
+- `~/.config/gezhi/api.env` with one of those names;
+- an explicit `GEZHI_API_ENV_FILE` path, which replaces the default file.
 
-`base_url` is optional. If omitted, goal-cli uses `PACKYAPI_BASE_URL`,
+`base_url` is optional. If omitted, gezhi uses `PACKYAPI_BASE_URL`,
 `OPENAI_BASE_URL`, or `https://www.packyapi.com/v1`.
 
-When `skill` is set, goal-cli resolves it as either a direct path to a
+When `skill` is set, gezhi resolves it as either a direct path to a
 `SKILL.md` file/directory or as a skill name under:
 
 - `skills/<name>/SKILL.md` in the project root;
@@ -175,13 +175,13 @@ fields: `provider`, `label`, `model`, `command`, `skill`, `base_url`, `binary`,
 
 The heartbeat waits for every configured tik provider. If any provider fails,
 returns unparseable JSON, or reviews the wrong artifact hash, the heartbeat
-blocks before tok. If all providers return usable verdicts, goal-cli writes one
+blocks before tok. If all providers return usable verdicts, gezhi writes one
 aggregate `tik.md` handoff for tok. The aggregate verdict is ready only when
 every provider is ready; otherwise the provider review text is carried forward
 as Markdown for tok.
 
 For `codex_file` and `claude_code_file`, if the configured tik prompt starts
-with a slash skill such as `/apsr-review`, goal-cli keeps that slash command as
+with a slash skill such as `/apsr-review`, gezhi keeps that slash command as
 the first stdin line for the reviewing CLI. For `api`, use `tik.skill` instead.
 
 Tik output must contain a JSON object with the configured verdict fields:
@@ -291,7 +291,7 @@ The `sandbox` field maps onto Claude Code permissions:
 Like Codex `workspace-write`, the mapping is a protocol boundary, not a hard OS
 sandbox: `acceptEdits` auto-accepts file edits in the granted directories and
 `Bash` runs unsandboxed commands. Source-diff and mutation files are audit
-evidence, not goal-cli hard gates.
+evidence, not gezhi hard gates.
 
 `runtime_write_dirs` is intentionally separate from `write_dirs`. It grants the
 tok process access to directories that may be updated by commands it runs, such
@@ -301,7 +301,7 @@ artifact output directory, but they must stay inside the project root and must
 not be the project root, `.git`, the goal config, or goal state/run directories.
 Tok may run the producer command or other commands for source validation. If
 those commands try to rewrite the configured artifact, the edit prohibition is
-enforced by Codex/Claude hooks. goal-cli records before/after hashes in
+enforced by Codex/Claude hooks. gezhi records before/after hashes in
 `tok_artifact_provenance.json` and does not attempt restore logic.
 
 `tok_report.json` is runtime-owned audit metadata, not model output. It keeps
@@ -323,33 +323,33 @@ The runtime writes the local evidence to
 
 ## Hard Gate Policy
 
-goal-cli only hard-gates invalid review evidence: conditions where tok cannot
+gezhi only hard-gates invalid review evidence: conditions where tok cannot
 trust the producer/tik evidence it would act on:
 
 - invalid configuration or setup validation failure;
 - producer failure or missing configured artifact;
 - tik provider failure, unparseable tik verdict, or stale tik review.
 
-The following are deliberately not hard gates. goal-cli records them and then
+The following are deliberately not hard gates. gezhi records them and then
 keeps the heartbeat loop active:
 
 - tok provider failure or timeout;
 - tok writes outside declared source/runtime scopes;
 - transient generated side effects under `runtime_write_dirs`;
 - attempted artifact writes, which should be blocked by Codex/Claude hooks and
-  are recorded by goal-cli if they occur;
+  are recorded by gezhi if they occur;
 - repeated tik objections;
 - tok completing without source changes;
 - no-mistakes setup, checkpoint, or review failure.
 
-These conditions may matter to a project owner, but goal-cli intentionally does
+These conditions may matter to a project owner, but gezhi intentionally does
 not decide them. It does not escalate them, ask for judgment, or stop the loop.
 If a project wants to enforce tok edit prohibitions, enforce them in
-Codex/Claude hooks. goal-cli only stops on producer/tik evidence validity.
+Codex/Claude hooks. gezhi only stops on producer/tik evidence validity.
 
 ## no-mistakes Checkpoint
 
-`goal-cli` can use `kunchenguid/no-mistakes` for heartbeat checkpoints.
+`gezhi` can use `kunchenguid/no-mistakes` for heartbeat checkpoints.
 
 ```toml
 [no_mistakes]
@@ -358,7 +358,7 @@ mode = "lightspeed"
 intent = "Rebuild, review, update source, and keep Git clean."
 skip_steps = []
 timeout_seconds = 0
-checkpoint_message = "goal-cli checkpoint: {goal_name} heartbeat {iteration} {phase}"
+checkpoint_message = "gezhi checkpoint: {goal_name} heartbeat {iteration} {phase}"
 ```
 
 - `enabled`: defaults to `true`. Set it to `false` only for isolated tests or
@@ -367,10 +367,10 @@ checkpoint_message = "goal-cli checkpoint: {goal_name} heartbeat {iteration} {ph
 - `mode`: no-mistakes pipeline preset. Defaults to `lightspeed`, which passes
   `--skip review,test,document,lint,push,pr,ci`. `fast` skips only
   `push,pr,ci`. `full` runs no-mistakes without preset skips.
-- `branch_prefix`: accepted for older configs but ignored. goal-cli is a
+- `branch_prefix`: accepted for older configs but ignored. gezhi is a
   single-person mainline workflow and does not create feature branches.
 - `intent`: optional text passed to `no-mistakes axi run --intent`. If omitted,
-  goal-cli generates a thing-centered intent from the goal name.
+  gezhi generates a thing-centered intent from the goal name.
 - `skip_steps`: optional no-mistakes pipeline steps for `--skip`, such as
   `["test", "lint"]`. These are added to the selected `mode` preset.
 - `timeout_seconds`: process timeout for `no-mistakes` commands; `0` means no
@@ -378,8 +378,8 @@ checkpoint_message = "goal-cli checkpoint: {goal_name} heartbeat {iteration} {ph
 - `checkpoint_message`: Git commit message template. Available placeholders are
   `{goal_name}`, `{iteration}`, and `{phase}`.
 
-When enabled, goal-cli prepares the repo before a non-dry-run heartbeat by
-ignoring `.goal/` in `.git/info/exclude` and checkpointing dirty project
+When enabled, gezhi prepares the repo before a non-dry-run heartbeat by
+ignoring `.gezhi/` in `.git/info/exclude` and checkpointing dirty project
 changes on the current branch. After successful tok and completion heartbeats,
 it checkpoints again. On non-default branches it then runs `no-mistakes init`
 and:
@@ -388,7 +388,7 @@ and:
 no-mistakes axi run --intent "<configured or generated intent>" --yes [--skip ...]
 ```
 
-On default branches such as `main` or `master`, goal-cli keeps the
+On default branches such as `main` or `master`, gezhi keeps the
 single-person mainline branch, records `no_mistakes_default_branch_skipped`,
 and does not invoke `no-mistakes axi run`, because no-mistakes refuses to
 validate default branches and asks users to create a feature branch.
@@ -405,17 +405,17 @@ and keeps the heartbeat active.
 ## Observability
 
 OpenTelemetry tracing is enabled by default and exports standard OTLP HTTP
-traces. `goal-cli` only instruments runtime stages; collectors, storage, and
+traces. `gezhi` only instruments runtime stages; collectors, storage, and
 dashboards come from existing OpenTelemetry-compatible tools. If the configured
 OTLP receiver is not reachable and no OTLP endpoint was explicitly set through
-the environment, `goal-cli` writes local fallback traces to
-`.goal/observability/traces.jsonl`. For collector-managed agent-side
+the environment, `gezhi` writes local fallback traces to
+`.gezhi/observability/traces.jsonl`. For collector-managed agent-side
 observation, use `docs/otel-collector-file.yaml` with OpenTelemetry Collector
-Contrib and read `.goal/observability/traces.json`.
+Contrib and read `.gezhi/observability/traces.json`.
 
 ```toml
 [observability]
-service_name = "goal-cli"
+service_name = "gezhi"
 endpoint = "http://localhost:4318/v1/traces"
 timeout_seconds = 5
 ```
@@ -435,14 +435,14 @@ are not replaced by the local JSONL fallback.
 
 Emitted spans include:
 
-- `goal_cli.heartbeat.run`
-- `goal_cli.heartbeat`
-- `goal_cli.producer`
-- `goal_cli.artifact.load`
-- `goal_cli.tik`
-- `goal_cli.tok`
-- `goal_cli.no_mistakes.prepare`
-- `goal_cli.no_mistakes.checkpoint`
+- `gezhi.heartbeat.run`
+- `gezhi.heartbeat`
+- `gezhi.producer`
+- `gezhi.artifact.load`
+- `gezhi.tik`
+- `gezhi.tok`
+- `gezhi.no_mistakes.prepare`
+- `gezhi.no_mistakes.checkpoint`
 
 ## Prompt Placeholders
 
@@ -489,8 +489,8 @@ max_history_items = 50
 
 ## Runtime States
 
-State is stored in `.goal/state.json`; each run also writes heartbeat and
-provider evidence under `.goal/runs/`.
+State is stored in `.gezhi/state.json`; each run also writes heartbeat and
+provider evidence under `.gezhi/runs/`.
 
 | Status | Meaning |
 | --- | --- |
@@ -581,8 +581,8 @@ governance artifact:
 - `last_transaction`: stable attempt ID, mutation identities, and journal path;
 - state `history`: recovery, stop/resume, and lifecycle events.
 
-Use `goal-cli stop` to persistently stop without marking the goal complete.
-`goal-cli resume` clears that operator stop and makes the next heartbeat due.
+Use `gezhi stop` to persistently stop without marking the goal complete.
+`gezhi resume` clears that operator stop and makes the next heartbeat due.
 On restart, transaction recovery and state reconciliation run before any new
 producer or provider inspection.
 
@@ -591,7 +591,7 @@ producer or provider inspection.
 Run:
 
 ```bash
-goal-cli doctor
+gezhi doctor
 ```
 
 Doctor is the static readiness gate for configured artifact execution. It
@@ -619,14 +619,14 @@ checks:
   "codex_app_server"`;
 - API tik `openai` package and API key readiness when `tik.provider = "api"`.
 
-The default summary reports `static_setup`. If it is ready, `goal-cli run` has
+The default summary reports `static_setup`. If it is ready, `gezhi run` has
 the local setup required to start the producer/tik/tok loop for the
 finished thing.
 
 For an opt-in tok smoke check:
 
 ```bash
-goal-cli doctor --smoke-codex-goal
+gezhi doctor --smoke-codex-goal
 ```
 
 The smoke check starts a minimal internal Codex `/goal` in a temporary writable
@@ -637,7 +637,7 @@ For `tok.provider = "codex_app_server"`, run the Codex app-server smoke
 instead:
 
 ```bash
-goal-cli doctor --smoke-codex-app-server
+gezhi doctor --smoke-codex-app-server
 ```
 
 That smoke check uses `codex app-server --stdio`, creates an ephemeral thread,
@@ -647,7 +647,7 @@ created in a temporary workspace.
 For `tok.provider = "claude_code_goal"`, run the Claude Code tok smoke instead:
 
 ```bash
-goal-cli doctor --smoke-claude-code-goal
+gezhi doctor --smoke-claude-code-goal
 ```
 
 For `tik.provider = "codex_file"`, also pass `--smoke-codex-file-tik`; for
@@ -655,9 +655,9 @@ For `tik.provider = "codex_file"`, also pass `--smoke-codex-file-tik`; for
 Combine the tok and tik smoke flags that match the configured providers:
 
 ```bash
-goal-cli doctor --smoke-codex-goal --smoke-codex-file-tik
-goal-cli doctor --smoke-codex-app-server --smoke-codex-file-tik
-goal-cli doctor --smoke-claude-code-goal --smoke-claude-code-file-tik
+gezhi doctor --smoke-codex-goal --smoke-codex-file-tik
+gezhi doctor --smoke-codex-app-server --smoke-codex-file-tik
+gezhi doctor --smoke-claude-code-goal --smoke-claude-code-file-tik
 ```
 
 The tik smoke checks copy a tiny temporary artifact into a single-file
@@ -668,22 +668,22 @@ ready after all required smoke checks for the configured providers pass.
 Clean up an interrupted heartbeat:
 
 ```bash
-goal-cli cleanup
+gezhi cleanup
 ```
 
 The cleanup command removes a stale heartbeat lock whose process is already
 dead and marks a running heartbeat as interrupted. To also terminate orphan
-goal-cli/Codex processes that still reference the current project, use:
+gezhi/Codex processes that still reference the current project, use:
 
 ```bash
-goal-cli cleanup --kill-orphans
+gezhi cleanup --kill-orphans
 ```
 
 Install an OS-level timed heartbeat:
 
 ```bash
-goal-cli heartbeat install --max-minutes 600
-goal-cli heartbeat status
+gezhi heartbeat install --max-minutes 600
+gezhi heartbeat status
 ```
 
 The default service wake-up is 5 minutes for perpetual goals so the shortest
@@ -691,7 +691,7 @@ provider backoff can be honored, and remains 30 minutes for legacy goals.
 Every tick first checks `next_due_at`; work that is not due exits without
 producer, tik, or tok calls. Each due tick invokes one bounded `heartbeat tick`,
 which cleans stale runtime state and then executes the same one-heartbeat
-runtime as `goal-cli run`.
+runtime as `gezhi run`.
 
 ## Runtime Units
 

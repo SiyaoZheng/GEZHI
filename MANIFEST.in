@@ -1,0 +1,12 @@
+include CHANGELOG.md
+include README.zh-CN.md
+include SECURITY.md
+include llms.txt
+
+recursive-include docs *.md *.yaml
+recursive-include skills *.md
+recursive-include examples *.md *.py *.toml
+recursive-include .agents *.md *.yaml
+recursive-include .claude *.json *.md *.yaml
+recursive-include .codex *.md *.toml
+recursive-include .github *.svg *.yml

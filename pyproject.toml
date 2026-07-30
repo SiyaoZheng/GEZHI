@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "goal-cli"
+name = "gezhi"
 version = "0.1.0"
-description = "The goal-cli control plane for GEZHI, a scholar-centered research agent architecture."
+description = "GEZHI, a scholar-centered research agent architecture and control plane."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
@@ -47,7 +47,7 @@ Issues = "https://github.com/SiyaoZheng/GEZHI/issues"
 Documentation = "https://github.com/SiyaoZheng/GEZHI/tree/main/docs"
 
 [project.scripts]
-goal-cli = "goal_cli.cli:main"
+gezhi = "gezhi.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

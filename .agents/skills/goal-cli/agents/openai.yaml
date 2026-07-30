@@ -1,6 +1,0 @@
-interface:
-  display_name: "Goal Cli"
-  short_description: "Repo-specific patterns and workflows for goal-cli"
-  default_prompt: "Use the goal-cli repo skill to follow existing architecture, testing, and workflow conventions."
-policy:
-  allow_implicit_invocation: true

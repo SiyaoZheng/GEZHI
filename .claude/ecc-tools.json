@@ -3,7 +3,7 @@
   "schemaVersion": "1.0",
   "generatedBy": "ecc-tools",
   "generatedAt": "2026-07-18T06:52:27.230Z",
-  "repo": "https://github.com/SiyaoZheng/goal-cli",
+  "repo": "https://github.com/SiyaoZheng/GEZHI",
   "referenceSetReadiness": {
     "score": 0,
     "present": 0,
@@ -148,66 +148,66 @@
     "research-pack"
   ],
   "managedFiles": [
-    ".claude/skills/goal-cli/SKILL.md",
-    ".agents/skills/goal-cli/SKILL.md",
-    ".agents/skills/goal-cli/agents/openai.yaml",
+    ".claude/skills/gezhi/SKILL.md",
+    ".agents/skills/gezhi/SKILL.md",
+    ".agents/skills/gezhi/agents/openai.yaml",
     ".claude/identity.json",
     ".codex/config.toml",
     ".codex/AGENTS.md",
     ".codex/agents/explorer.toml",
     ".codex/agents/reviewer.toml",
     ".codex/agents/docs-researcher.toml",
-    ".claude/homunculus/instincts/inherited/goal-cli-instincts.yaml",
-    ".claude/research/goal-cli-research-playbook.md"
+    ".claude/homunculus/instincts/inherited/gezhi-instincts.yaml",
+    ".claude/research/gezhi-research-playbook.md"
   ],
   "packageFiles": {
     "runtime-core": [
-      ".claude/skills/goal-cli/SKILL.md",
-      ".agents/skills/goal-cli/SKILL.md",
-      ".agents/skills/goal-cli/agents/openai.yaml",
+      ".claude/skills/gezhi/SKILL.md",
+      ".agents/skills/gezhi/SKILL.md",
+      ".agents/skills/gezhi/agents/openai.yaml",
       ".claude/identity.json",
       ".codex/config.toml",
       ".codex/AGENTS.md",
       ".codex/agents/explorer.toml",
       ".codex/agents/reviewer.toml",
       ".codex/agents/docs-researcher.toml",
-      ".claude/homunculus/instincts/inherited/goal-cli-instincts.yaml"
+      ".claude/homunculus/instincts/inherited/gezhi-instincts.yaml"
     ],
     "research-pack": [
-      ".claude/research/goal-cli-research-playbook.md"
+      ".claude/research/gezhi-research-playbook.md"
     ]
   },
   "moduleFiles": {
     "runtime-core": [
-      ".claude/skills/goal-cli/SKILL.md",
-      ".agents/skills/goal-cli/SKILL.md",
-      ".agents/skills/goal-cli/agents/openai.yaml",
+      ".claude/skills/gezhi/SKILL.md",
+      ".agents/skills/gezhi/SKILL.md",
+      ".agents/skills/gezhi/agents/openai.yaml",
       ".claude/identity.json",
       ".codex/config.toml",
       ".codex/AGENTS.md",
       ".codex/agents/explorer.toml",
       ".codex/agents/reviewer.toml",
       ".codex/agents/docs-researcher.toml",
-      ".claude/homunculus/instincts/inherited/goal-cli-instincts.yaml"
+      ".claude/homunculus/instincts/inherited/gezhi-instincts.yaml"
     ],
     "research-pack": [
-      ".claude/research/goal-cli-research-playbook.md"
+      ".claude/research/gezhi-research-playbook.md"
     ]
   },
   "files": [
     {
       "moduleId": "runtime-core",
-      "path": ".claude/skills/goal-cli/SKILL.md",
+      "path": ".claude/skills/gezhi/SKILL.md",
       "description": "Repository-specific Claude Code skill generated from git history."
     },
     {
       "moduleId": "runtime-core",
-      "path": ".agents/skills/goal-cli/SKILL.md",
+      "path": ".agents/skills/gezhi/SKILL.md",
       "description": "Codex-facing copy of the generated repository skill."
     },
     {
       "moduleId": "runtime-core",
-      "path": ".agents/skills/goal-cli/agents/openai.yaml",
+      "path": ".agents/skills/gezhi/agents/openai.yaml",
       "description": "Codex skill metadata so the repo skill appears cleanly in the skill interface."
     },
     {
@@ -242,26 +242,26 @@
     },
     {
       "moduleId": "runtime-core",
-      "path": ".claude/homunculus/instincts/inherited/goal-cli-instincts.yaml",
+      "path": ".claude/homunculus/instincts/inherited/gezhi-instincts.yaml",
       "description": "Continuous-learning instincts derived from repository patterns."
     },
     {
       "moduleId": "research-pack",
-      "path": ".claude/research/goal-cli-research-playbook.md",
+      "path": ".claude/research/gezhi-research-playbook.md",
       "description": "Research workflow playbook for source attribution and long-context tasks."
     }
   ],
   "workflows": [],
   "adapters": {
     "claudeCode": {
-      "skillPath": ".claude/skills/goal-cli/SKILL.md",
+      "skillPath": ".claude/skills/gezhi/SKILL.md",
       "identityPath": ".claude/identity.json",
       "commandPaths": []
     },
     "codex": {
       "configPath": ".codex/config.toml",
       "agentsGuidePath": ".codex/AGENTS.md",
-      "skillPath": ".agents/skills/goal-cli/SKILL.md"
+      "skillPath": ".agents/skills/gezhi/SKILL.md"
     }
   }
 }

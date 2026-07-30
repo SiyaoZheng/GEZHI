@@ -6,8 +6,8 @@ import textwrap
 import unittest
 from pathlib import Path
 
-from goal_cli.config import ConfigError, load_config
-from goal_cli.lease import (
+from gezhi.config import ConfigError, load_config
+from gezhi.lease import (
     CapabilityLease,
     DeltaError,
     FileMutation,
@@ -239,7 +239,7 @@ class CapabilityLeaseTests(unittest.TestCase):
             detect_mutations(before, after)
 
     def _write_config(self, root: Path, lease_config: str) -> Path:
-        config_path = root / "goal.toml"
+        config_path = root / "gezhi.toml"
         config_path.write_text(
             textwrap.dedent(
                 f"""

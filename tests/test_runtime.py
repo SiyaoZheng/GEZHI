@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import signal
+import subprocess
 import sys
 import tempfile
 import textwrap
@@ -10,20 +12,52 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from goal_cli.adapters import api_tik_client_options, build_api_tik_prompt, effective_api_tik_model, run_tik
-from goal_cli.config import DEFAULT_API_TIK_BASE_URL, DEFAULT_API_TIK_MODEL, ConfigError, TikConfig, TokConfig, load_config, validate_config
-from goal_cli.runtime import DEFAULT_MAX_MINUTES, HeartbeatLock, RuntimeOptions, cleanup_runtime, load_state, run_heartbeat, run_goal
-from goal_cli.tok_execution import build_claude_code_goal_tok_plan, build_codex_app_server_tok_plan, build_codex_goal_tok_plan, execute_tok
+from gezhi.adapters import api_tik_client_options, build_api_tik_prompt, effective_api_tik_model, run_tik
+from gezhi.config import DEFAULT_API_TIK_BASE_URL, DEFAULT_API_TIK_MODEL, ConfigError, TikConfig, TokConfig, load_config, validate_config
+from gezhi.migration import is_claude_print_command, is_codex_exec_command, is_gezhi_runtime_command, is_legacy_runtime_command
+from gezhi.runtime import DEFAULT_MAX_MINUTES, HeartbeatLock, RuntimeOptions, cleanup_runtime, load_state, run_heartbeat, run_goal
+from gezhi.tok_execution import build_claude_code_goal_tok_plan, build_codex_app_server_tok_plan, build_codex_goal_tok_plan, execute_tok
 
 
 class GoalRuntimeTests(unittest.TestCase):
+    def test_legacy_runtime_command_matching_is_token_aware(self) -> None:
+        legacy_console = "goal" + "-cli"
+        legacy_module = "goal" + "_cli.cli"
+
+        self.assertTrue(is_legacy_runtime_command(f"/usr/local/bin/{legacy_console} -c project.toml run"))
+        self.assertTrue(is_legacy_runtime_command(f"{sys.executable} -m {legacy_module} -c project.toml run"))
+        self.assertTrue(is_legacy_runtime_command(f"/usr/bin/env MODE=test {legacy_console} run"))
+        self.assertFalse(is_legacy_runtime_command(f"{sys.executable} worker.py /tmp/{legacy_console}-report.json"))
+        self.assertFalse(is_legacy_runtime_command(f"{sys.executable} worker.py --root /tmp/{legacy_console}-project"))
+        self.assertFalse(is_legacy_runtime_command(f"{sys.executable} worker.py -m {legacy_module}"))
+
+    def test_gezhi_runtime_command_matching_is_token_aware(self) -> None:
+        self.assertTrue(is_gezhi_runtime_command("/usr/local/bin/gezhi -c project.toml run"))
+        self.assertTrue(is_gezhi_runtime_command(f"{sys.executable} -u -m gezhi -c project.toml run"))
+        self.assertTrue(is_gezhi_runtime_command(f"{sys.executable} /usr/local/bin/gezhi run"))
+        self.assertFalse(is_gezhi_runtime_command(f"{sys.executable} worker.py /tmp/gezhi.cli-report.json"))
+        self.assertFalse(is_gezhi_runtime_command(f"{sys.executable} worker.py --root /tmp/gezhi-project"))
+        self.assertFalse(is_gezhi_runtime_command(f"{sys.executable} worker.py -m gezhi"))
+
+    def test_provider_command_matching_is_token_aware(self) -> None:
+        self.assertTrue(is_codex_exec_command("/usr/local/bin/codex exec --json"))
+        self.assertTrue(is_codex_exec_command("/usr/bin/env codex exec --json"))
+        self.assertTrue(is_codex_exec_command("/usr/local/bin/node /opt/codex.js exec --json"))
+        self.assertFalse(is_codex_exec_command("grep 'codex exec' /tmp/runtime.log"))
+        self.assertFalse(is_codex_exec_command(f"{sys.executable} worker.py --message 'codex exec'"))
+
+        self.assertTrue(is_claude_print_command("/usr/local/bin/claude --print --output-format json"))
+        self.assertTrue(is_claude_print_command("/usr/local/bin/node /opt/claude.js --print"))
+        self.assertFalse(is_claude_print_command("grep 'claude --print' /tmp/runtime.log"))
+        self.assertFalse(is_claude_print_command(f"{sys.executable} worker.py --message 'claude --print'"))
+
     def test_runtime_options_default_to_ten_hour_budget(self) -> None:
         self.assertEqual(RuntimeOptions().max_minutes, DEFAULT_MAX_MINUTES)
         self.assertEqual(DEFAULT_MAX_MINUTES, 600.0)
 
     def test_heartbeat_lock_recovers_dead_pid_before_stale_age(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            lock_path = Path(temp_dir) / ".goal" / ".heartbeat.lock"
+            lock_path = Path(temp_dir) / ".gezhi" / ".heartbeat.lock"
             lock_path.parent.mkdir()
             lock_path.write_text(json.dumps({"pid": 999999999, "created_at": "2026-07-04T00:00:00+00:00"}) + "\n", encoding="utf-8")
 
@@ -34,7 +68,7 @@ class GoalRuntimeTests(unittest.TestCase):
 
     def test_heartbeat_lock_exit_only_releases_owned_lock(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            lock_path = Path(temp_dir) / ".goal" / ".heartbeat.lock"
+            lock_path = Path(temp_dir) / ".gezhi" / ".heartbeat.lock"
             lock = HeartbeatLock(lock_path, stale_seconds=6 * 60 * 60)
             lock.__enter__()
             successor_payload = {"pid": os.getpid(), "created_at": "2026-07-04T00:00:00+00:00", "token": "successor"}
@@ -48,10 +82,10 @@ class GoalRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             self._write_basic_project(root)
-            config = load_config(root / "goal.toml")
+            config = load_config(root / "gezhi.toml")
             config.state_dir.mkdir(parents=True)
             config.lock_path.write_text(json.dumps({"pid": os.getpid(), "created_at": "2026-07-04T00:00:00+00:00"}) + "\n", encoding="utf-8")
-            heartbeat_text = json.dumps({"phase": "tok_running", "run_dir": ".goal/runs/heartbeat-0001"}) + "\n"
+            heartbeat_text = json.dumps({"phase": "tok_running", "run_dir": ".gezhi/runs/heartbeat-0001"}) + "\n"
             config.heartbeat_path.write_text(heartbeat_text, encoding="utf-8")
 
             result = run_goal(config, RuntimeOptions(max_minutes=0))
@@ -65,7 +99,7 @@ class GoalRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             self._write_basic_project(root)
-            config = load_config(root / "goal.toml")
+            config = load_config(root / "gezhi.toml")
             config.state_dir.mkdir(parents=True)
             config.lock_path.write_text(
                 json.dumps({"pid": 999999999, "created_at": "2026-07-05T00:00:00+00:00", "token": "dead"}) + "\n",
@@ -79,7 +113,7 @@ class GoalRuntimeTests(unittest.TestCase):
                         "status": "active",
                         "iteration": 1,
                         "last_seen": "2026-07-05T00:00:00+00:00",
-                        "run_dir": ".goal/runs/heartbeat-0001",
+                        "run_dir": ".gezhi/runs/heartbeat-0001",
                     }
                 )
                 + "\n",
@@ -102,7 +136,7 @@ class GoalRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             self._write_basic_project(root)
-            config = load_config(root / "goal.toml")
+            config = load_config(root / "gezhi.toml")
             config.state_dir.mkdir(parents=True)
             config.lock_path.write_text(
                 json.dumps({"pid": os.getpid(), "created_at": "2026-07-05T00:00:00+00:00", "token": "live"}) + "\n",
@@ -114,12 +148,48 @@ class GoalRuntimeTests(unittest.TestCase):
             self.assertTrue(config.lock_path.exists())
             self.assertTrue(any("active" in warning for warning in result.warnings))
 
+    def test_orphan_cleanup_does_not_match_prefix_neighbor_project(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            base = Path(temp_dir)
+            root = base / "paper"
+            neighbor = base / "paper-old"
+            root.mkdir()
+            self._write_basic_project(root)
+            neighbor.mkdir()
+            config = load_config(root / "gezhi.toml")
+            process_rows = "\n".join(
+                (
+                    f"123 1 {sys.executable} -m gezhi -c {neighbor / 'gezhi.toml'} run",
+                    f"124 1 {sys.executable} -m gezhi -c {root / 'gezhi.toml'} run",
+                    f"125 1 {root / '.venv' / 'bin' / 'python'} -m gezhi -c {neighbor / 'gezhi.toml'} run",
+                    f"126 1 grep 'codex exec' {root / 'runtime.log'}",
+                    f"127 1 grep 'claude --print' {root / 'runtime.log'}",
+                    "",
+                )
+            )
+
+            with (
+                mock.patch(
+                    "gezhi.runtime.subprocess.run",
+                    return_value=subprocess.CompletedProcess([], 0, stdout=process_rows, stderr=""),
+                ),
+                mock.patch("gezhi.runtime.os.kill") as kill,
+            ):
+                result = cleanup_runtime(config, kill_orphans=True)
+
+            kill.assert_called_once_with(124, signal.SIGTERM)
+            self.assertTrue(any("terminated orphan process 124" in action for action in result.actions))
+            self.assertFalse(any("123" in action for action in result.actions))
+            self.assertFalse(any("125" in action for action in result.actions))
+            self.assertFalse(any("126" in action for action in result.actions))
+            self.assertFalse(any("127" in action for action in result.actions))
+
     def test_run_goal_advances_one_heartbeat_at_a_time(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             self._write_basic_project(root)
 
-            config = load_config(root / "goal.toml")
+            config = load_config(root / "gezhi.toml")
             first_result = run_goal(config, RuntimeOptions(max_minutes=0))
 
             self.assertEqual(first_result.exit_code, 0)
@@ -133,7 +203,7 @@ class GoalRuntimeTests(unittest.TestCase):
             self.assertFalse(state["last_tok"]["artifact_provenance"]["artifact_changed_during_tok"])
             first_reviewed_sha = state["last_tok"]["reviewed_artifact_sha256"]
             self.assertEqual((root / "output" / "artifact.txt").read_text(encoding="utf-8"), "draft\n")
-            heartbeat = json.loads((root / ".goal" / "heartbeat.json").read_text(encoding="utf-8"))
+            heartbeat = json.loads((root / ".gezhi" / "heartbeat.json").read_text(encoding="utf-8"))
             self.assertEqual(heartbeat["phase"], "tok_completed")
 
             second_result = run_goal(config, RuntimeOptions(max_minutes=0))
@@ -152,7 +222,7 @@ class GoalRuntimeTests(unittest.TestCase):
             root = Path(temp_dir)
             self._write_basic_project(root)
 
-            config = load_config(root / "goal.toml")
+            config = load_config(root / "gezhi.toml")
             first_result = run_goal(config, RuntimeOptions(max_minutes=0))
 
             self.assertEqual(first_result.exit_code, 0)
@@ -173,7 +243,7 @@ class GoalRuntimeTests(unittest.TestCase):
             root = Path(temp_dir)
             self._write_basic_project(root)
             self._write_tok_behavior(root, {"mode": "success_no_change"})
-            config = load_config(root / "goal.toml")
+            config = load_config(root / "gezhi.toml")
             config.state_dir.mkdir(parents=True)
             config.state_path.write_text(
                 json.dumps(
@@ -211,7 +281,7 @@ class GoalRuntimeTests(unittest.TestCase):
             self._write_basic_project(root)
             self._write_barrier_tik(root, "alpha", "beta", "alpha objection")
             self._write_barrier_tik(root, "beta", "alpha", "beta objection")
-            config_path = root / "goal.toml"
+            config_path = root / "gezhi.toml"
             config_path.write_text(
                 config_path.read_text(encoding="utf-8").replace(
                     '[tik]\nprovider = "oracle"\ncommand = "python3 scripts/tik.py"',
@@ -263,7 +333,7 @@ class GoalRuntimeTests(unittest.TestCase):
             self._write_basic_project(root)
             self._write_barrier_tik(root, "alpha", "checklist", "alpha objection")
             self._write_barrier_tik(root, "checklist", "alpha", "checklist objection")
-            config_path = root / "goal.toml"
+            config_path = root / "gezhi.toml"
             config_path.write_text(
                 config_path.read_text(encoding="utf-8").replace(
                     '[tik]\nprovider = "oracle"\ncommand = "python3 scripts/tik.py"',
@@ -307,7 +377,7 @@ class GoalRuntimeTests(unittest.TestCase):
             self._write_basic_project(root)
             self._write_tok_behavior(root, {"mode": "success_no_change"})
 
-            config = load_config(root / "goal.toml")
+            config = load_config(root / "gezhi.toml")
             result = run_goal(config, RuntimeOptions(max_minutes=0))
 
             self.assertEqual(result.exit_code, 0)
@@ -319,13 +389,13 @@ class GoalRuntimeTests(unittest.TestCase):
             self.assertEqual(state["last_tok"]["actual_sources_changed"], [])
             self.assertTrue((root / state["last_tok"]["source_changes_path"]).exists())
 
-    def test_tok_artifact_mutation_is_observed_not_restored_by_goal_cli(self) -> None:
+    def test_tok_artifact_mutation_is_observed_not_restored_by_gezhi(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             self._write_basic_project(root)
             self._write_tok_behavior(root, {"mode": "mutate_artifact"})
 
-            config = load_config(root / "goal.toml")
+            config = load_config(root / "gezhi.toml")
             result = run_goal(config, RuntimeOptions(max_minutes=0))
 
             self.assertEqual(result.exit_code, 0)
@@ -358,7 +428,7 @@ class GoalRuntimeTests(unittest.TestCase):
             self._write_basic_project(root)
             self._write_tok_behavior(root, {"mode": "mutate_generated"})
 
-            config = load_config(root / "goal.toml")
+            config = load_config(root / "gezhi.toml")
             result = run_goal(config, RuntimeOptions(max_minutes=0))
 
             self.assertEqual(result.exit_code, 0)
@@ -377,7 +447,7 @@ class GoalRuntimeTests(unittest.TestCase):
             self._write_basic_project(root)
             self._write_tok_behavior(root, {"mode": "metadata_only"})
 
-            config = load_config(root / "goal.toml")
+            config = load_config(root / "gezhi.toml")
             result = run_goal(config, RuntimeOptions(max_minutes=0))
 
             self.assertEqual(result.exit_code, 0)
@@ -392,7 +462,7 @@ class GoalRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             self._write_basic_project(root)
-            config_path = root / "goal.toml"
+            config_path = root / "gezhi.toml"
             config_path.write_text(
                 config_path.read_text(encoding="utf-8").replace(
                     'write_dirs = ["src"]',
@@ -416,7 +486,7 @@ class GoalRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             self._write_basic_project(root)
-            config = load_config(root / "goal.toml")
+            config = load_config(root / "gezhi.toml")
             config.state_dir.mkdir(parents=True)
             config.state_path.write_text(
                 json.dumps(
@@ -445,7 +515,7 @@ class GoalRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             self._write_basic_project(root, write_dirs=["."])
-            config = load_config(root / "goal.toml")
+            config = load_config(root / "gezhi.toml")
 
             issues = validate_config(config)
 
@@ -456,7 +526,7 @@ class GoalRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             self._write_basic_project(root)
-            config_path = root / "goal.toml"
+            config_path = root / "gezhi.toml"
             config_path.write_text(
                 config_path.read_text(encoding="utf-8").replace('copy_as = "artifact.txt"', 'copy_as = "../artifact.txt"'),
                 encoding="utf-8",
@@ -471,7 +541,7 @@ class GoalRuntimeTests(unittest.TestCase):
             self._write_basic_project(root)
             (root / "scripts" / "tik.py").write_text("print('not json')\n", encoding="utf-8")
 
-            config = load_config(root / "goal.toml")
+            config = load_config(root / "gezhi.toml")
             result = run_goal(config, RuntimeOptions(max_minutes=0))
 
             self.assertEqual(result.exit_code, 1)
@@ -498,7 +568,7 @@ class GoalRuntimeTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            config = load_config(root / "goal.toml")
+            config = load_config(root / "gezhi.toml")
             result = run_goal(config, RuntimeOptions(max_minutes=0))
 
             self.assertEqual(result.exit_code, 1)
@@ -514,7 +584,7 @@ class GoalRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             self._write_basic_project(root)
-            config = load_config(root / "goal.toml")
+            config = load_config(root / "gezhi.toml")
 
             for _ in range(3):
                 result = run_heartbeat(config, RuntimeOptions(review_only=True, max_minutes=0))
@@ -532,7 +602,7 @@ class GoalRuntimeTests(unittest.TestCase):
             root = Path(temp_dir)
             self._write_basic_project(root)
             self._write_tok_behavior(root, {"mode": "success_no_change"})
-            config = load_config(root / "goal.toml")
+            config = load_config(root / "gezhi.toml")
 
             for _ in range(3):
                 result = run_heartbeat(config, RuntimeOptions(max_minutes=0))
@@ -551,7 +621,7 @@ class GoalRuntimeTests(unittest.TestCase):
             root = Path(temp_dir)
             self._write_basic_project(root)
             (root / "src" / "source.txt").write_text("ready\n", encoding="utf-8")
-            config = load_config(root / "goal.toml")
+            config = load_config(root / "gezhi.toml")
 
             result = run_heartbeat(config, RuntimeOptions(review_only=True, max_minutes=0))
 
@@ -567,7 +637,7 @@ class GoalRuntimeTests(unittest.TestCase):
             self._write_basic_project(root)
             self._write_tok_behavior(root, {"mode": "invalid"})
 
-            config = load_config(root / "goal.toml")
+            config = load_config(root / "gezhi.toml")
             result = run_goal(config, RuntimeOptions(max_minutes=0))
 
             self.assertEqual(result.exit_code, 0)
@@ -591,7 +661,7 @@ class GoalRuntimeTests(unittest.TestCase):
                 },
             )
 
-            config = load_config(root / "goal.toml")
+            config = load_config(root / "gezhi.toml")
             result = run_goal(config, RuntimeOptions(max_minutes=0))
 
             self.assertEqual(result.exit_code, 0)
@@ -610,7 +680,7 @@ class GoalRuntimeTests(unittest.TestCase):
             self._write_basic_project(root)
             self._write_tok_behavior(root, {"mode": "no_completion_marker"})
 
-            config = load_config(root / "goal.toml")
+            config = load_config(root / "gezhi.toml")
             result = run_goal(config, RuntimeOptions(max_minutes=0))
 
             self.assertEqual(result.exit_code, 0)
@@ -619,7 +689,7 @@ class GoalRuntimeTests(unittest.TestCase):
             self.assertEqual(state["status"], "active")
             self.assertEqual(state["next_action"], "tok")
             self.assertEqual(state["history"][-1]["event"], "tok_failed_ignored")
-            self.assertTrue(state["history"][-1]["run_dir"].startswith(".goal/runs/heartbeat-0001"))
+            self.assertTrue(state["history"][-1]["run_dir"].startswith(".gezhi/runs/heartbeat-0001"))
             self.assertEqual(state["last_tok_attempt"]["error"], "codex_goal exited without a model completion marker")
             self.assertNotIn("last_tok", state)
 
@@ -628,7 +698,7 @@ class GoalRuntimeTests(unittest.TestCase):
             root = Path(temp_dir)
             bin_dir = root / "bin"
             src_dir = root / "src"
-            run_dir = root / ".goal" / "runs" / "heartbeat-0001"
+            run_dir = root / ".gezhi" / "runs" / "heartbeat-0001"
             bin_dir.mkdir()
             src_dir.mkdir()
             run_dir.mkdir(parents=True)
@@ -691,7 +761,7 @@ class GoalRuntimeTests(unittest.TestCase):
             root = Path(temp_dir)
             bin_dir = root / "bin"
             src_dir = root / "src"
-            run_dir = root / ".goal" / "runs" / "heartbeat-0001"
+            run_dir = root / ".gezhi" / "runs" / "heartbeat-0001"
             bin_dir.mkdir()
             src_dir.mkdir()
             run_dir.mkdir(parents=True)
@@ -732,7 +802,7 @@ class GoalRuntimeTests(unittest.TestCase):
             root = Path(temp_dir)
             bin_dir = root / "bin"
             src_dir = root / "src"
-            run_dir = root / ".goal" / "runs" / "heartbeat-0001"
+            run_dir = root / ".gezhi" / "runs" / "heartbeat-0001"
             bin_dir.mkdir()
             src_dir.mkdir()
             run_dir.mkdir(parents=True)
@@ -792,7 +862,7 @@ class GoalRuntimeTests(unittest.TestCase):
             root = Path(temp_dir)
             bin_dir = root / "bin"
             src_dir = root / "src"
-            run_dir = root / ".goal" / "runs" / "heartbeat-0001"
+            run_dir = root / ".gezhi" / "runs" / "heartbeat-0001"
             bin_dir.mkdir()
             src_dir.mkdir()
             run_dir.mkdir(parents=True)
@@ -815,11 +885,14 @@ class GoalRuntimeTests(unittest.TestCase):
                         request_id = message["id"]
                         params = message.get("params") or {}
                         if method == "initialize":
+                            assert params["clientInfo"]["name"] == "gezhi"
                             respond(request_id, {"userAgent": "fake-codex-app-server"})
                         elif method == "thread/start":
                             assert params["ephemeral"] is False
                             assert params["approvalPolicy"] == "never"
                             assert params["sandbox"] == "workspace-write"
+                            assert params["serviceName"] == "gezhi"
+                            assert params["threadSource"] == "gezhi-tok"
                             respond(request_id, {"thread": {"id": "thread-1"}})
                         elif method == "thread/goal/set":
                             assert params["threadId"] == "thread-1"
@@ -879,7 +952,7 @@ class GoalRuntimeTests(unittest.TestCase):
     def test_claude_code_goal_plan_maps_sandbox_modes(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            run_dir = root / ".goal" / "runs" / "heartbeat-0001"
+            run_dir = root / ".gezhi" / "runs" / "heartbeat-0001"
             base = dict(
                 provider="claude_code_goal",
                 prompt_template="",
@@ -916,7 +989,7 @@ class GoalRuntimeTests(unittest.TestCase):
             root = Path(temp_dir)
             bin_dir = root / "bin"
             src_dir = root / "src"
-            run_dir = root / ".goal" / "runs" / "heartbeat-0001"
+            run_dir = root / ".gezhi" / "runs" / "heartbeat-0001"
             bin_dir.mkdir()
             src_dir.mkdir()
             (run_dir / "attachments").mkdir(parents=True)
@@ -959,7 +1032,7 @@ class GoalRuntimeTests(unittest.TestCase):
             self._write_basic_project(root, write_dirs=["src", "data"])
             for name in ("data", "build", "logs"):
                 (root / name).mkdir()
-            config_path = root / "goal.toml"
+            config_path = root / "gezhi.toml"
             config_path.write_text(
                 config_path.read_text(encoding="utf-8").replace(
                     'write_dirs = ["src", "data"]',
@@ -969,7 +1042,7 @@ class GoalRuntimeTests(unittest.TestCase):
             )
             config = load_config(config_path)
 
-            plan = build_codex_goal_tok_plan(config.tok, "repair prompt", root / ".goal" / "runs" / "heartbeat-0001")
+            plan = build_codex_goal_tok_plan(config.tok, "repair prompt", root / ".gezhi" / "runs" / "heartbeat-0001")
 
             self.assertEqual(plan.cwd, root.resolve())
             args = list(plan.command)
@@ -995,7 +1068,7 @@ class GoalRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             self._write_basic_project(root)
-            config = load_config(root / "goal.toml")
+            config = load_config(root / "gezhi.toml")
 
             result = run_heartbeat(config, RuntimeOptions(max_minutes=0))
 
@@ -1042,7 +1115,7 @@ class GoalRuntimeTests(unittest.TestCase):
                 + "\n",
                 encoding="utf-8",
             )
-            config = load_config(root / "goal.toml")
+            config = load_config(root / "gezhi.toml")
 
             result = run_heartbeat(config, RuntimeOptions(max_minutes=0))
 
@@ -1063,7 +1136,7 @@ class GoalRuntimeTests(unittest.TestCase):
     def test_codex_file_tik_uses_single_artifact_read_only_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            run_dir = root / ".goal" / "runs" / "heartbeat-0001"
+            run_dir = root / ".gezhi" / "runs" / "heartbeat-0001"
             run_dir.mkdir(parents=True)
             artifact = root / "output" / "artifact.pdf"
             artifact.parent.mkdir()
@@ -1127,7 +1200,7 @@ class GoalRuntimeTests(unittest.TestCase):
     def test_claude_code_file_tik_uses_single_artifact_write_disallowed_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            run_dir = root / ".goal" / "runs" / "heartbeat-0001"
+            run_dir = root / ".gezhi" / "runs" / "heartbeat-0001"
             run_dir.mkdir(parents=True)
             artifact = root / "output" / "artifact.pdf"
             artifact.parent.mkdir()
@@ -1209,10 +1282,10 @@ class GoalRuntimeTests(unittest.TestCase):
                 "Review the attached PDF.",
             )
 
-            self.assertIn('<goal-cli-tik-skill name="apsr-review">', prompt)
+            self.assertIn('<gezhi-tik-skill name="apsr-review">', prompt)
             self.assertIn(f"Source: {skill_path.resolve(strict=False)}", prompt)
             self.assertIn("Judge the artifact as an APSR referee.", prompt)
-            self.assertIn("<goal-cli-tik-task>", prompt)
+            self.assertIn("<gezhi-tik-task>", prompt)
             self.assertIn("Review the attached PDF.", prompt)
 
     def test_api_tik_defaults_to_packy_fable5(self) -> None:
@@ -1222,7 +1295,7 @@ class GoalRuntimeTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temp_dir:
             missing_env_file = str(Path(temp_dir) / "missing.env")
-            with mock.patch.dict(os.environ, {"GOAL_CLI_API_ENV_FILE": missing_env_file}, clear=True):
+            with mock.patch.dict(os.environ, {"GEZHI_API_ENV_FILE": missing_env_file}, clear=True):
                 options, base_url, api_key_env = api_tik_client_options(config, 30)
 
         self.assertEqual(base_url, DEFAULT_API_TIK_BASE_URL)
@@ -1254,7 +1327,7 @@ class GoalRuntimeTests(unittest.TestCase):
             env_file = Path(temp_dir) / "api.env"
             env_file.write_text("PACKYAPI_API_KEY=file-packy-key\n", encoding="utf-8")
 
-            with mock.patch.dict(os.environ, {"GOAL_CLI_API_ENV_FILE": str(env_file)}, clear=True):
+            with mock.patch.dict(os.environ, {"GEZHI_API_ENV_FILE": str(env_file)}, clear=True):
                 options, base_url, api_key_source = api_tik_client_options(config, 30)
 
         self.assertEqual(base_url, DEFAULT_API_TIK_BASE_URL)
@@ -1265,7 +1338,7 @@ class GoalRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             self._write_basic_project(root)
-            config_path = root / "goal.toml"
+            config_path = root / "gezhi.toml"
             text = config_path.read_text(encoding="utf-8")
             text = text.replace(
                 'provider = "oracle"\ncommand = "python3 scripts/tik.py"',
@@ -1282,7 +1355,7 @@ class GoalRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             self._write_basic_project(root)
-            config_path = root / "goal.toml"
+            config_path = root / "gezhi.toml"
             text = config_path.read_text(encoding="utf-8")
             text = text.replace(
                 'provider = "oracle"\ncommand = "python3 scripts/tik.py"',
@@ -1298,7 +1371,7 @@ class GoalRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             self._write_basic_project(root)
-            config_path = root / "goal.toml"
+            config_path = root / "gezhi.toml"
             text = config_path.read_text(encoding="utf-8")
             text = text.replace("python3 scripts/produce.py", f"{sys.executable} scripts/produce.py")
             text = text.replace("python3 scripts/tik.py", f"{sys.executable} scripts/tik.py")
@@ -1330,7 +1403,7 @@ class GoalRuntimeTests(unittest.TestCase):
                 "import time\ntime.sleep(5)\n",
                 encoding="utf-8",
             )
-            config_path = root / "goal.toml"
+            config_path = root / "gezhi.toml"
             text = config_path.read_text(encoding="utf-8")
             text = text.replace("python3 scripts/produce.py", f"{sys.executable} scripts/produce.py")
             config_path.write_text(text, encoding="utf-8")
@@ -1347,7 +1420,7 @@ class GoalRuntimeTests(unittest.TestCase):
 
     def test_scientificity_example_uses_codex_file_tik_and_codex_goal_tok(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
-        config = load_config(repo_root / "examples" / "scientificity" / "goal.toml")
+        config = load_config(repo_root / "examples" / "scientificity" / "gezhi.toml")
 
         self.assertEqual(config.tik.provider, "codex_file")
         self.assertEqual(config.tok.provider, "codex_goal")
@@ -1395,7 +1468,7 @@ class GoalRuntimeTests(unittest.TestCase):
 
     def test_scientificity_example_validates_after_copy_to_project_root(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
-        example_text = (repo_root / "examples" / "scientificity" / "goal.toml").read_text(encoding="utf-8")
+        example_text = (repo_root / "examples" / "scientificity" / "gezhi.toml").read_text(encoding="utf-8")
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             (root / "output").mkdir()
@@ -1404,7 +1477,7 @@ class GoalRuntimeTests(unittest.TestCase):
             (root / "src").mkdir()
             (root / "data").mkdir()
             (root / "writing").mkdir()
-            config_path = root / "goal.toml"
+            config_path = root / "gezhi.toml"
             config_path.write_text(example_text, encoding="utf-8")
 
             config = load_config(config_path)
@@ -1424,8 +1497,8 @@ class GoalRuntimeTests(unittest.TestCase):
 
     def test_scientificity_claude_example_matches_codex_example_with_claude_providers(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
-        codex_config = load_config(repo_root / "examples" / "scientificity" / "goal.toml")
-        claude_config = load_config(repo_root / "examples" / "scientificity-claude" / "goal.toml")
+        codex_config = load_config(repo_root / "examples" / "scientificity" / "gezhi.toml")
+        claude_config = load_config(repo_root / "examples" / "scientificity-claude" / "gezhi.toml")
 
         self.assertEqual(claude_config.tik.provider, "claude_code_file")
         self.assertEqual(claude_config.tok.provider, "claude_code_goal")
@@ -1446,7 +1519,7 @@ class GoalRuntimeTests(unittest.TestCase):
 
     def test_scientificity_claude_example_validates_after_copy_to_project_root(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
-        example_text = (repo_root / "examples" / "scientificity-claude" / "goal.toml").read_text(encoding="utf-8")
+        example_text = (repo_root / "examples" / "scientificity-claude" / "gezhi.toml").read_text(encoding="utf-8")
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             (root / "output").mkdir()
@@ -1455,7 +1528,7 @@ class GoalRuntimeTests(unittest.TestCase):
             (root / "src").mkdir()
             (root / "data").mkdir()
             (root / "writing").mkdir()
-            config_path = root / "goal.toml"
+            config_path = root / "gezhi.toml"
             config_path.write_text(example_text, encoding="utf-8")
 
             config = load_config(config_path)
@@ -1468,7 +1541,7 @@ class GoalRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             self._write_basic_project(root)
-            config_path = root / "goal.toml"
+            config_path = root / "gezhi.toml"
             text = config_path.read_text(encoding="utf-8")
             text = text.replace('provider = "codex_goal"', 'provider = "codex_exec"')
             text = text.replace("Use {tik_review_path}.", "Use {tik_review_path}.\nAsk a human for approval before editing source files.")
@@ -1483,7 +1556,7 @@ class GoalRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             self._write_basic_project(root)
-            config_path = root / "goal.toml"
+            config_path = root / "gezhi.toml"
             text = config_path.read_text(encoding="utf-8")
             text = text.replace('sandbox = "workspace-write"', 'command = "python3 scripts/tok.py"\nsandbox = "workspace-write"')
             config_path.write_text(text, encoding="utf-8")
@@ -1495,7 +1568,7 @@ class GoalRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             self._write_basic_project(root)
-            config_path = root / "goal.toml"
+            config_path = root / "gezhi.toml"
             config_path.write_text(
                 config_path.read_text(encoding="utf-8").replace("{tik_review_path}", "{missing_field}"),
                 encoding="utf-8",
@@ -1530,7 +1603,7 @@ class GoalRuntimeTests(unittest.TestCase):
                 import json
                 import os
                 from pathlib import Path
-                artifact = Path(os.environ["GOAL_ARTIFACT"]).read_text(encoding="utf-8")
+                artifact = Path(os.environ["GEZHI_ARTIFACT"]).read_text(encoding="utf-8")
                 ready = artifact.strip() == "ready"
                 if ready:
                     print("Review: artifact is ready.")
@@ -1544,8 +1617,8 @@ class GoalRuntimeTests(unittest.TestCase):
         )
         config = f'''
 name = "test-artifact-goal"
-state_dir = ".goal"
-runs_dir = ".goal/runs"
+state_dir = ".gezhi"
+runs_dir = ".gezhi/runs"
 
 [artifact]
 path = "output/artifact.txt"
@@ -1588,7 +1661,7 @@ enabled = false
 generated_dirs = ["output", "build"]
 max_blocker_repeats = 3
 '''
-        (root / "goal.toml").write_text(config, encoding="utf-8")
+        (root / "gezhi.toml").write_text(config, encoding="utf-8")
 
     def _install_fake_codex(self, root: Path) -> None:
         bin_dir = root / "bin"
@@ -1604,7 +1677,7 @@ max_blocker_repeats = 3
 
                 args = sys.argv[1:]
                 workspace = Path(args[args.index("-C") + 1])
-                root = workspace if (workspace / "goal.toml").exists() else workspace.parent
+                root = workspace if (workspace / "gezhi.toml").exists() else workspace.parent
                 assert args[0] == "exec"
                 assert "--enable" in args and "goals" in args
                 assert "--output-last-message" not in args
@@ -1619,7 +1692,7 @@ max_blocker_repeats = 3
                     print("tokens used")
                     print("1")
                 attachment_dirs = [Path(args[index + 1]) for index, arg in enumerate(args) if arg == "--add-dir" and args[index + 1].endswith("attachments")]
-                run_dir = attachment_dirs[0].parent if attachment_dirs else root / ".goal" / "runs" / "unknown"
+                run_dir = attachment_dirs[0].parent if attachment_dirs else root / ".gezhi" / "runs" / "unknown"
                 output_path = run_dir / "tok_report.json"
                 behavior_path = root / "scripts" / "tok_behavior.json"
                 behavior = json.loads(behavior_path.read_text(encoding="utf-8")) if behavior_path.exists() else {"mode": "success"}
@@ -1680,7 +1753,7 @@ max_blocker_repeats = 3
                 import time
                 from pathlib import Path
 
-                run_dir = Path(os.environ["GOAL_RUN_DIR"])
+                run_dir = Path(os.environ["GEZHI_RUN_DIR"])
                 (run_dir / "{label}.started").write_text("started\\n", encoding="utf-8")
                 deadline = time.time() + 3
                 while time.time() < deadline:
@@ -1701,8 +1774,8 @@ max_blocker_repeats = 3
     def _write_codex_goal_project(self, root: Path, tok_provider: str = "codex_goal") -> Path:
         config = '''
 name = "codex-goal-test"
-state_dir = ".goal"
-runs_dir = ".goal/runs"
+state_dir = ".gezhi"
+runs_dir = ".gezhi/runs"
 
 [artifact]
 path = "output/artifact.txt"
@@ -1731,7 +1804,7 @@ enabled = false
 [observability]
 enabled = false
 '''.replace('provider = "codex_goal"', f'provider = "{tok_provider}"')
-        config_path = root / "goal.toml"
+        config_path = root / "gezhi.toml"
         config_path.write_text(config, encoding="utf-8")
         return config_path
 

@@ -7,11 +7,11 @@ import textwrap
 import unittest
 from pathlib import Path
 
-from goal_cli.adapters import TikOutcome, ProducerOutcome
-from goal_cli.config import analyze_config_policy, load_config
-from goal_cli.runtime import RuntimeOptions, run_goal
-from goal_cli.setup_check import DoctorOptions, ProbeResult, doctor_exit_code, run_doctor
-from goal_cli.tok_execution import TokExecutionResult
+from gezhi.adapters import TikOutcome, ProducerOutcome
+from gezhi.config import analyze_config_policy, load_config
+from gezhi.runtime import RuntimeOptions, run_goal
+from gezhi.setup_check import DoctorOptions, ProbeResult, doctor_exit_code, run_doctor
+from gezhi.tok_execution import TokExecutionResult
 
 
 class DeepModuleInterfaceTests(unittest.TestCase):
@@ -46,13 +46,13 @@ class DeepModuleInterfaceTests(unittest.TestCase):
             config_dir = root / "configs"
             config_dir.mkdir()
             (root / "output").mkdir()
-            config_path = config_dir / "goal.toml"
+            config_path = config_dir / "gezhi.toml"
             config_path.write_text(
                 textwrap.dedent(
                     """
                     name = "config-protection-test"
-                    state_dir = ".goal"
-                    runs_dir = ".goal/runs"
+                    state_dir = ".gezhi"
+                    runs_dir = ".gezhi/runs"
 
                     [project]
                     root = ".."
@@ -142,8 +142,8 @@ class DeepModuleInterfaceTests(unittest.TestCase):
         runtime_write_dirs_text = f"runtime_write_dirs = {json.dumps(runtime_write_dirs)}\n" if runtime_write_dirs is not None else ""
         config = f'''
 name = "deep-module-test"
-state_dir = ".goal"
-runs_dir = ".goal/runs"
+state_dir = ".gezhi"
+runs_dir = ".gezhi/runs"
 
 [artifact]
 path = "output/artifact.txt"
@@ -176,7 +176,7 @@ enabled = false
 [safety]
 generated_dirs = ["output", "build"]
 '''
-        config_path = root / "goal.toml"
+        config_path = root / "gezhi.toml"
         config_path.write_text(config, encoding="utf-8")
         return config_path
 
