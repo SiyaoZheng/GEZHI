@@ -1,6 +1,6 @@
-# goal-cli CLI Reference
+# gezhi CLI Reference
 
-`goal-cli` is an `argparse` CLI. The parser generates `-h` and `--help`
+`gezhi` is an `argparse` CLI. The parser generates `-h` and `--help`
 output from the same command definitions used at runtime.
 
 ## Top Level
@@ -9,19 +9,19 @@ Omitting the command defaults to `run`. Global options must appear before the
 subcommand.
 
 ```text
-usage: goal-cli [-h] [-c CONFIG]
+usage: gezhi [-h] [-c CONFIG]
                 {init,validate,doctor,run,stop,resume,tik,heartbeat,state,reset,cleanup,render-prompts} ...
 
-Configure and run artifact-centered heartbeats for coding agents.
+Configure and run GEZHI artifact-centered heartbeats for coding agents.
 
 options:
   -h, --help            show this help message and exit
-  -c, --config CONFIG   Path to goal.toml (default: goal.toml)
+  -c, --config CONFIG   Path to gezhi.toml (default: gezhi.toml)
 
 commands:
   {init,validate,doctor,run,stop,resume,tik,heartbeat,state,reset,cleanup,render-prompts}
-    init                Create a starter artifact goal.toml
-    validate            Validate goal.toml, prompt placeholders, and writable
+    init                Create a starter artifact gezhi.toml
+    validate            Validate gezhi.toml, prompt placeholders, and writable
                         scopes
     doctor              Check setup readiness before a heartbeat
     run                 Run one autonomous heartbeat
@@ -36,14 +36,14 @@ commands:
                         provider processes
     render-prompts      Render tik and tok prompts without running providers
 
-Omitting the command defaults to run. Use 'goal-cli <command> -h' for
+Omitting the command defaults to run. Use 'gezhi <command> -h' for
 subcommand options.
 ```
 
 ## Run
 
 ```text
-usage: goal-cli run [-h] [--dry-run] [--max-minutes MAX_MINUTES]
+usage: gezhi run [-h] [--dry-run] [--max-minutes MAX_MINUTES]
 
 Run exactly one heartbeat: producer rebuild, tik review, then tok only if
 review fails.
@@ -60,7 +60,7 @@ options:
 ## Doctor
 
 ```text
-usage: goal-cli doctor [-h] [--smoke-codex-goal]
+usage: gezhi doctor [-h] [--smoke-codex-goal]
                        [--smoke-codex-app-server]
                        [--smoke-claude-code-goal]
                        [--smoke-codex-file-tik] [--smoke-claude-code-file-tik]
@@ -101,7 +101,7 @@ default static command checks. There is no separate checklist smoke flag.
 ## Tik
 
 ```text
-usage: goal-cli tik [-h]
+usage: gezhi tik [-h]
 
 Run producer plus tik against the configured artifact without source changes.
 
@@ -112,13 +112,13 @@ options:
 ## Perpetual Stop and Resume
 
 ```text
-usage: goal-cli stop [-h]
+usage: gezhi stop [-h]
 
 Persistently stop a perpetual goal without completing it.
 ```
 
 ```text
-usage: goal-cli resume [-h]
+usage: gezhi resume [-h]
 
 Resume a stopped perpetual goal from durable state.
 ```
@@ -132,11 +132,11 @@ heartbeat due. Neither command is available as a substitute for configuring
 ## System-Level Heartbeat
 
 The system-level heartbeat installs an OS timer. Each tick runs at most one
-bounded `goal-cli` heartbeat. Perpetual scheduling is durable state shared
+bounded `gezhi` heartbeat. Perpetual scheduling is durable state shared
 across ticks.
 
 ```text
-usage: goal-cli heartbeat [-h] {install,status,uninstall,paths,tick} ...
+usage: gezhi heartbeat [-h] {install,status,uninstall,paths,tick} ...
 
 Manage an OS-level timer that starts one hardened heartbeat tick per schedule.
 
@@ -153,7 +153,7 @@ heartbeat commands:
 ```
 
 ```text
-usage: goal-cli heartbeat install [-h] [--manager {auto,launchd,systemd-user}]
+usage: gezhi heartbeat install [-h] [--manager {auto,launchd,systemd-user}]
                                   [--label LABEL]
                                   [--every-minutes EVERY_MINUTES]
                                   [--max-minutes MAX_MINUTES] [--no-start]
@@ -172,13 +172,13 @@ options:
   --max-minutes MAX_MINUTES
                         Maximum wall-clock minutes for each heartbeat tick
   --no-start            Write service files but do not load or start the timer
-  --force               Overwrite an existing goal-cli-managed service file
+  --force               Overwrite an existing GEZHI-managed service file
   --dry-run             Print files and commands without writing or starting
                         anything
 ```
 
 ```text
-usage: goal-cli heartbeat tick [-h] [--max-minutes MAX_MINUTES]
+usage: gezhi heartbeat tick [-h] [--max-minutes MAX_MINUTES]
 
 Clean stale heartbeat state, run exactly one heartbeat, and treat active locks
 as a skipped tick.
@@ -189,14 +189,15 @@ options:
                         Maximum wall-clock minutes for this heartbeat tick
 ```
 
-`goal-cli heartbeat install` writes a per-user LaunchAgent on macOS and a
+`gezhi heartbeat install` writes a per-user LaunchAgent on macOS and a
 per-user systemd service/timer on Linux. The generated service calls
-`goal-cli -c /absolute/path/to/goal.toml heartbeat tick --max-minutes ...`,
+`<python executable> -m gezhi -c /absolute/path/to/gezhi.toml heartbeat tick
+--max-minutes ...`,
 uses the project root as its working directory, and writes service logs under
-`.goal/system-heartbeat/`.
+`.gezhi/system-heartbeat/`.
 
 `heartbeat tick` first runs runtime cleanup for stale locks/interrupted phases,
-then calls the same one-heartbeat runtime as `goal-cli run`. If another
+then calls the same one-heartbeat runtime as `gezhi run`. If another
 heartbeat is currently active, the tick exits successfully after logging a
 skipped tick so the OS scheduler does not mark normal overlap as a failure.
 For perpetual goals, a not-yet-due tick also exits before producer or provider
@@ -206,14 +207,14 @@ time; healthy and active cadence still comes from `next_due_at`.
 ## Cleanup
 
 ```text
-usage: goal-cli cleanup [-h] [--kill-orphans]
+usage: gezhi cleanup [-h] [--kill-orphans]
 
 Remove stale heartbeat locks, mark interrupted running phases, and optionally
 stop orphan provider processes for this project.
 
 options:
   -h, --help      show this help message and exit
-  --kill-orphans  Terminate orphan goal-cli/Codex processes for this project
+  --kill-orphans  Terminate orphan GEZHI/Codex processes for this project
                   when no live heartbeat lock exists
 ```
 
@@ -221,15 +222,15 @@ options:
 
 | Command | Effect |
 | --- | --- |
-| `goal-cli init` | Create a starter artifact `goal.toml`; refuses to overwrite an existing config. |
-| `goal-cli validate` | Load config and print a JSON summary if config policy passes. |
-| `goal-cli doctor` | Run static readiness probes and optional provider smoke checks. |
-| `goal-cli run` | Execute exactly one heartbeat. |
-| `goal-cli tik` | Run producer plus tik only; do not invoke tok. |
-| `goal-cli heartbeat install` | Install a per-user OS timer for repeated one-heartbeat ticks. |
-| `goal-cli heartbeat status` | Show the OS timer status and managed file paths. |
-| `goal-cli heartbeat uninstall` | Stop and remove the OS timer files for this project. |
-| `goal-cli state` | Print current state JSON or the default initial state. |
-| `goal-cli reset` | Remove state and lock files; preserve run artifacts. |
-| `goal-cli cleanup` | Clean stale/interrupted heartbeat state. |
-| `goal-cli render-prompts` | Render tik and tok prompts without running providers. |
+| `gezhi init` | Create a starter artifact `gezhi.toml`; refuses to overwrite an existing config. |
+| `gezhi validate` | Load config and print a JSON summary if config policy passes. |
+| `gezhi doctor` | Run static readiness probes and optional provider smoke checks. |
+| `gezhi run` | Execute exactly one heartbeat. |
+| `gezhi tik` | Run producer plus tik only; do not invoke tok. |
+| `gezhi heartbeat install` | Install a per-user OS timer for repeated one-heartbeat ticks. |
+| `gezhi heartbeat status` | Show the OS timer status and managed file paths. |
+| `gezhi heartbeat uninstall` | Stop and remove the OS timer files for this project. |
+| `gezhi state` | Print current state JSON or the default initial state. |
+| `gezhi reset` | Remove state and lock files; preserve run artifacts. |
+| `gezhi cleanup` | Clean stale/interrupted heartbeat state. |
+| `gezhi render-prompts` | Render tik and tok prompts without running providers. |

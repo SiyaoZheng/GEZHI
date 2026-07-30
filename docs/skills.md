@@ -1,6 +1,6 @@
-# goal-cli Skills
+# gezhi Skills
 
-`goal-cli` ships two agent-facing skills. Use them when you want a coding agent
+`gezhi` ships two agent-facing skills. Use them when you want a coding agent
 to keep working toward the thing you will actually inspect, not just keep
 changing code.
 
@@ -8,10 +8,10 @@ changing code.
 
 | Skill | Use it when |
 | --- | --- |
-| [`goal-cli-project-setup`](../skills/goal-cli-project-setup/SKILL.md) | You want to connect an existing project to `goal-cli`. |
-| [`goal-cli-template-author`](../skills/goal-cli-template-author/SKILL.md) | You are improving reusable examples, checks, or docs in this repository. |
+| [`gezhi-project-setup`](../skills/gezhi-project-setup/SKILL.md) | You want to connect an existing project to `gezhi`. |
+| [`gezhi-template-author`](../skills/gezhi-template-author/SKILL.md) | You are improving reusable examples, checks, or docs in this repository. |
 
-Most users should start with `goal-cli-project-setup`.
+Most users should start with `gezhi-project-setup`.
 
 ## One Prompt
 
@@ -28,20 +28,20 @@ skill folder. For Codex-style skills:
 
 ```bash
 mkdir -p "$HOME/.codex/skills"
-cp -R skills/goal-cli-project-setup "$HOME/.codex/skills/"
+cp -R skills/gezhi-project-setup "$HOME/.codex/skills/"
 ```
 
 For Claude Code:
 
 ```bash
 mkdir -p "$HOME/.claude/skills"
-cp -R skills/goal-cli-project-setup "$HOME/.claude/skills/"
+cp -R skills/gezhi-project-setup "$HOME/.claude/skills/"
 ```
 
 Install the template-author skill only when you are maintaining this repository:
 
 ```bash
-cp -R skills/goal-cli-template-author "$HOME/.codex/skills/"
+cp -R skills/gezhi-template-author "$HOME/.codex/skills/"
 ```
 
 ## What Good Setup Produces
@@ -50,26 +50,26 @@ After setup, the project should have:
 
 - one thing to inspect;
 - one command that rebuilds it;
-- a `goal.toml` file;
+- a `gezhi.toml` file;
 - clear folders that future repair runs may edit;
 - clear folders that future repair runs must not edit;
-- passing `goal-cli validate`;
-- a useful `goal-cli doctor` result;
-- a dry run from `goal-cli run --dry-run`.
+- passing `gezhi validate`;
+- a useful `gezhi doctor` result;
+- a dry run from `gezhi run --dry-run`.
 - a recommendation for either a manual heartbeat or a system-level timed
   heartbeat.
 
 Only after those checks should a real repair run start:
 
 ```bash
-goal-cli run --max-minutes 600
+gezhi run --max-minutes 600
 ```
 
 For unattended progress, install the per-user OS timer instead of leaving a
-foreground loop running. Let goal-cli choose the wake-up interval unless the
+foreground loop running. Let gezhi choose the wake-up interval unless the
 project needs an explicit fixed timer: perpetual goals default to a 5-minute
 wake-up, while legacy goals default to 30 minutes.
 
 ```bash
-goal-cli heartbeat install --max-minutes 600
+gezhi heartbeat install --max-minutes 600
 ```

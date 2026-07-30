@@ -1,0 +1,301 @@
+# Instincts generated from https://github.com/SiyaoZheng/GEZHI
+# Generated: 2026-07-18T06:52:37.634Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: gezhi-commit-conventional
+trigger: "when writing a commit message"
+confidence: 0.85
+domain: git
+source: repo-analysis
+source_repo: https://github.com/SiyaoZheng/GEZHI
+---
+
+# GEZHI Commit Conventional
+
+## Action
+
+Use Conventional Commit format with an appropriate type such as feat, fix,
+docs, test, refactor, or chore.
+
+## Evidence
+
+- 1 commits analyzed
+- Detected conventional commit pattern
+- Examples: docs: update perpetual runtime documentation
+
+---
+id: gezhi-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/SiyaoZheng/GEZHI
+---
+
+# GEZHI Commit Length
+
+## Action
+
+Keep commit messages concise (~44 characters)
+
+## Evidence
+
+- Average commit message length: 44 chars
+- Based on 1 commits
+
+---
+id: gezhi-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/SiyaoZheng/GEZHI
+---
+
+# GEZHI Naming Files
+
+## Action
+
+Use snake_case for Python modules and `test_*.py` for test modules.
+
+## Evidence
+
+- Runtime modules under `src/gezhi/` use snake_case
+- Test modules under `tests/` use the `test_*.py` pattern
+
+---
+id: gezhi-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/SiyaoZheng/GEZHI
+---
+
+# GEZHI Import Relative
+
+## Action
+
+Use relative imports between modules inside the `gezhi` package.
+
+## Evidence
+
+- Package modules consistently use relative Python imports
+- Example: `from .config import GoalConfig`
+
+---
+id: gezhi-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/SiyaoZheng/GEZHI
+---
+
+# GEZHI Export Style
+
+## Action
+
+Keep public exports explicit; define `__all__` only for deliberate public
+surfaces.
+
+## Evidence
+
+- `src/gezhi/__init__.py` defines the supported package export explicitly
+
+---
+id: gezhi-test-separate
+trigger: "when writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/SiyaoZheng/GEZHI
+---
+
+# GEZHI Test Separate
+
+## Action
+
+Place tests in `tests/` and name modules `test_*.py`.
+
+## Evidence
+
+- Separate test directory pattern detected
+- Tests live in dedicated test folders
+
+---
+id: gezhi-instinct-file-naming
+trigger: "When creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: SiyaoZheng/gezhi
+---
+
+# GEZHI Instinct File Naming
+
+## Action
+
+Name Python modules with snake_case (for example, `system_heartbeat.py`).
+
+## Evidence
+
+- Pattern in codeStyle.namingConventions.files
+
+---
+id: gezhi-instinct-function-naming
+trigger: "When defining a new function"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: SiyaoZheng/gezhi
+---
+
+# GEZHI Instinct Function Naming
+
+## Action
+
+Name functions with snake_case (for example, `run_heartbeat`).
+
+## Evidence
+
+- Pattern in codeStyle.namingConventions.functions
+
+---
+id: gezhi-instinct-class-naming
+trigger: "When defining a new class"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: SiyaoZheng/gezhi
+---
+
+# GEZHI Instinct Class Naming
+
+## Action
+
+Name the class using PascalCase (e.g., MyClass)
+
+## Evidence
+
+- Pattern in codeStyle.namingConventions.classes
+
+---
+id: gezhi-instinct-constant-naming
+trigger: "When defining a constant"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: SiyaoZheng/gezhi
+---
+
+# GEZHI Instinct Constant Naming
+
+## Action
+
+Name the constant using SCREAMING_SNAKE_CASE (e.g., MY_CONSTANT)
+
+## Evidence
+
+- Pattern in codeStyle.namingConventions.constants
+
+---
+id: gezhi-instinct-import-style
+trigger: "When importing modules within the codebase"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: SiyaoZheng/gezhi
+---
+
+# GEZHI Instinct Import Style
+
+## Action
+
+Use relative imports
+
+## Evidence
+
+- Pattern in codeStyle.importStyle
+
+---
+id: gezhi-instinct-export-style
+trigger: "When exporting functions or classes"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: SiyaoZheng/gezhi
+---
+
+# GEZHI Instinct Export Style
+
+## Action
+
+Use `__all__` only when declaring an intentional public module surface.
+
+## Evidence
+
+- Pattern in codeStyle.exportStyle
+
+---
+id: gezhi-instinct-test-location
+trigger: "When adding new tests"
+confidence: 0.9
+domain: testing
+source: repo-analysis
+source_repo: SiyaoZheng/gezhi
+---
+
+# GEZHI Instinct Test Location
+
+## Action
+
+Place test files in the separate 'tests' folder
+
+## Evidence
+
+- Pattern in architecture.folderStructure.testLocation
+- Presence of 'tests' folder
+
+---
+id: gezhi-instinct-commit-prefix-docs
+trigger: "When committing documentation changes"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: SiyaoZheng/gezhi
+---
+
+# GEZHI Instinct Commit Prefix Docs
+
+## Action
+
+Prefix the commit message with 'docs:'
+
+## Evidence
+
+- Commit example: 'docs: update perpetual runtime documentation'
+- Pattern in commits.prefixes
+
+---
+id: gezhi-instinct-commit-format-conventional
+trigger: "When writing any commit message"
+confidence: 0.8
+domain: git
+source: repo-analysis
+source_repo: SiyaoZheng/gezhi
+---
+
+# GEZHI Instinct Commit Format Conventional
+
+## Action
+
+Follow the Conventional Commits format: <type>: <description>
+
+## Evidence
+
+- Pattern in commits.type
+- Commit example: 'docs: update perpetual runtime documentation'

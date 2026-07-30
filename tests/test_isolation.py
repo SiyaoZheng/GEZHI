@@ -5,10 +5,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from goal_cli.adapters import build_contained_shell_command, mutation_containment_backend, run_shell_logged
-from goal_cli.isolation import IsolatedWorkspace, IsolationError
-from goal_cli.lease import CapabilityLease, FileOperation, LeaseRule
-from goal_cli.transaction import load_transaction
+from gezhi.adapters import build_contained_shell_command, mutation_containment_backend, run_shell_logged
+from gezhi.isolation import IsolatedWorkspace, IsolationError
+from gezhi.lease import CapabilityLease, FileOperation, LeaseRule
+from gezhi.transaction import load_transaction
 
 
 class IsolatedWorkspaceTests(unittest.TestCase):
@@ -57,8 +57,9 @@ class IsolatedWorkspaceTests(unittest.TestCase):
             self._write_repo(root)
             lease = self._lease(FileOperation.MODIFY, "src/source.txt")
 
-            with IsolatedWorkspace(root, root / ".goal", "attempt-exact") as workspace:
+            with IsolatedWorkspace(root, root / ".gezhi", "attempt-exact") as workspace:
                 self.assertNotEqual(workspace.root, root)
+                self.assertTrue(workspace.root.parent.name.startswith("gezhi-attempt-exact-"))
                 self.assertEqual((workspace.root / "src" / "dirty-untracked.txt").read_text(encoding="utf-8"), "untracked\n")
                 self.assertEqual((root / "src" / "source.txt").read_text(encoding="utf-8"), "draft\n")
                 (workspace.root / "src" / "source.txt").write_text("revised\n", encoding="utf-8")
@@ -78,7 +79,7 @@ class IsolatedWorkspaceTests(unittest.TestCase):
             self._write_repo(root)
             lease = self._lease(FileOperation.MODIFY, "src/source.txt")
 
-            with IsolatedWorkspace(root, root / ".goal", "attempt-denied") as workspace:
+            with IsolatedWorkspace(root, root / ".gezhi", "attempt-denied") as workspace:
                 (workspace.root / "src" / "source.txt").write_text("revised\n", encoding="utf-8")
                 (workspace.root / "governance-checklist.md").write_text("substitute work\n", encoding="utf-8")
                 result = workspace.finalize(lease)
@@ -96,7 +97,7 @@ class IsolatedWorkspaceTests(unittest.TestCase):
             self._write_repo(root)
             lease = self._lease(FileOperation.MODIFY, "src/source.txt")
 
-            with IsolatedWorkspace(root, root / ".goal", "attempt-drift") as workspace:
+            with IsolatedWorkspace(root, root / ".gezhi", "attempt-drift") as workspace:
                 (workspace.root / "src" / "source.txt").write_text("agent revision\n", encoding="utf-8")
                 (root / "src" / "source.txt").write_text("user edit after baseline\n", encoding="utf-8")
                 result = workspace.finalize(lease)
@@ -116,7 +117,7 @@ class IsolatedWorkspaceTests(unittest.TestCase):
             os.symlink(outside, root / "src" / "escape")
 
             with self.assertRaisesRegex(IsolationError, "symlink escapes"):
-                with IsolatedWorkspace(root, root / ".goal", "attempt-symlink"):
+                with IsolatedWorkspace(root, root / ".gezhi", "attempt-symlink"):
                     pass
 
     def test_isolated_workspace_rejects_new_symlink_payload_before_commit(self) -> None:
@@ -125,7 +126,7 @@ class IsolatedWorkspaceTests(unittest.TestCase):
             self._write_repo(root)
             lease = self._lease(FileOperation.CREATE, "src/escape")
 
-            with IsolatedWorkspace(root, root / ".goal", "attempt-new-symlink") as workspace:
+            with IsolatedWorkspace(root, root / ".gezhi", "attempt-new-symlink") as workspace:
                 os.symlink("../../../outside", workspace.root / "src" / "escape")
                 result = workspace.finalize(lease)
 
@@ -140,7 +141,7 @@ class IsolatedWorkspaceTests(unittest.TestCase):
             self._write_repo(root)
             lease = self._lease(FileOperation.MODIFY, "src/source.txt")
 
-            with IsolatedWorkspace(root, root / ".goal", "attempt-zero") as workspace:
+            with IsolatedWorkspace(root, root / ".gezhi", "attempt-zero") as workspace:
                 result = workspace.finalize(lease)
 
             self.assertTrue(result.authorized)
@@ -150,11 +151,11 @@ class IsolatedWorkspaceTests(unittest.TestCase):
 
     def _write_repo(self, root: Path) -> None:
         (root / ".git").mkdir(parents=True)
-        (root / ".goal").mkdir()
+        (root / ".gezhi").mkdir()
         (root / "src").mkdir()
         (root / "src" / "source.txt").write_text("draft\n", encoding="utf-8")
         (root / "src" / "dirty-untracked.txt").write_text("untracked\n", encoding="utf-8")
-        (root / ".goal" / "state.json").write_text("{}\n", encoding="utf-8")
+        (root / ".gezhi" / "state.json").write_text("{}\n", encoding="utf-8")
 
     def _lease(self, operation: FileOperation, path: str) -> CapabilityLease:
         return CapabilityLease(

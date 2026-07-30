@@ -377,7 +377,7 @@ Issue [#27911](https://github.com/openai/codex/issues/27911) 报告 `goals_1.sql
 
 Issue [#24978](https://github.com/openai/codex/issues/24978) 请求给 agent 一个 `clear_goal` / delete / reset 工具。当前源码仍然保持模型工具只允许 `complete` 或 `blocked`，没有 agent-facing clear。也就是说，OpenAI 看起来有意保留这个边界：清除目标是用户或控制面的动作，不是模型自己的动作。
 
-## 17. 对本项目 goal-cli 的客观启示
+## 17. 对本项目 gezhi 的客观启示
 
 如果只看 OpenAI 的实现，它提供的是一个“持久目标 + idle continuation + 状态核算 + 受限模型工具”的运行时。它没有公开实现 `producer -> tik -> tok`，也没有任何证据显示存在 `reproduce -> tik` 这种额外阶段。
 

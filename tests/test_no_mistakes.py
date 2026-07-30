@@ -9,11 +9,11 @@ import time
 import unittest
 from pathlib import Path
 
-from goal_cli.adapters import TikOutcome, ProducerOutcome
-from goal_cli import no_mistakes
-from goal_cli.config import ConfigError, load_config
-from goal_cli.runtime import RuntimeOptions, load_state, run_heartbeat, run_goal
-from goal_cli.tok_execution import TokExecutionResult
+from gezhi.adapters import TikOutcome, ProducerOutcome
+from gezhi import no_mistakes
+from gezhi.config import ConfigError, load_config
+from gezhi.runtime import RuntimeOptions, load_state, run_heartbeat, run_goal
+from gezhi.tok_execution import TokExecutionResult
 
 
 class NoMistakesIntegrationTests(unittest.TestCase):
@@ -36,7 +36,7 @@ class NoMistakesIntegrationTests(unittest.TestCase):
     def test_heartbeat_auto_checkpoints_and_runs_no_mistakes_on_current_branch(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            fake_log = root / ".goal" / "fake-no-mistakes.jsonl"
+            fake_log = root / ".gezhi" / "fake-no-mistakes.jsonl"
             self._install_fake_no_mistakes(root, fake_log)
             config = load_config(self._write_project(root, disable_observability=True))
             self._git(root, "init")
@@ -53,9 +53,14 @@ class NoMistakesIntegrationTests(unittest.TestCase):
             state = load_state(config)
             self.assertEqual(state["last_no_mistakes"]["status"], "no_mistakes_passed")
             exclude_text = (root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
-            self.assertIn("/.goal/", exclude_text)
+            self.assertIn("/.gezhi/", exclude_text)
             self.assertIn("/output/", exclude_text)
             self.assertIn("/build/", exclude_text)
+            commit_identity = self._git(root, "show", "-s", "--format=%an|%ae|%s").stdout.strip()
+            self.assertTrue(
+                commit_identity.startswith("GEZHI|gezhi@localhost|GEZHI checkpoint:"),
+                commit_identity,
+            )
 
             events = [json.loads(line) for line in fake_log.read_text(encoding="utf-8").splitlines()]
             self.assertEqual([event["command"] for event in events], ["init", "axi run"])
@@ -72,7 +77,7 @@ class NoMistakesIntegrationTests(unittest.TestCase):
     def test_heartbeat_skips_no_mistakes_axi_run_on_default_branch(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            fake_log = root / ".goal" / "fake-no-mistakes.jsonl"
+            fake_log = root / ".gezhi" / "fake-no-mistakes.jsonl"
             self._install_fake_no_mistakes(root, fake_log)
             config = load_config(self._write_project(root, disable_observability=True))
             self._git(root, "init")
@@ -96,7 +101,7 @@ class NoMistakesIntegrationTests(unittest.TestCase):
     def test_lightspeed_mode_pre_skips_high_latency_no_mistakes_steps(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            fake_log = root / ".goal" / "fake-no-mistakes.jsonl"
+            fake_log = root / ".gezhi" / "fake-no-mistakes.jsonl"
             self._install_fake_no_mistakes(root, fake_log)
             config = load_config(
                 self._write_project(
@@ -122,8 +127,8 @@ class NoMistakesIntegrationTests(unittest.TestCase):
     def test_no_mistakes_checkpoint_is_capped_by_run_deadline(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            fake_log = root / ".goal" / "fake-no-mistakes.jsonl"
-            child_marker = root / ".goal" / "child-survived.txt"
+            fake_log = root / ".gezhi" / "fake-no-mistakes.jsonl"
+            child_marker = root / ".gezhi" / "child-survived.txt"
             self._install_fake_no_mistakes(root, fake_log, axi_sleep_seconds=5.0, child_marker=child_marker)
             config = load_config(self._write_project(root, disable_observability=True))
             self._git(root, "init")
@@ -148,7 +153,7 @@ class NoMistakesIntegrationTests(unittest.TestCase):
     def test_no_mistakes_prepare_budget_exhaustion_is_resumable(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            fake_log = root / ".goal" / "fake-no-mistakes.jsonl"
+            fake_log = root / ".gezhi" / "fake-no-mistakes.jsonl"
             self._install_fake_no_mistakes(root, fake_log)
             config = load_config(self._write_project(root, disable_observability=True))
             self._git(root, "init")
@@ -166,7 +171,7 @@ class NoMistakesIntegrationTests(unittest.TestCase):
     def test_run_goal_ignores_no_mistakes_budget_as_goal_gate(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            fake_log = root / ".goal" / "fake-no-mistakes.jsonl"
+            fake_log = root / ".gezhi" / "fake-no-mistakes.jsonl"
             self._install_fake_no_mistakes(root, fake_log, axi_sleep_seconds=5.0)
             config = load_config(self._write_project(root, disable_observability=True))
             self._git(root, "init")
@@ -181,7 +186,7 @@ class NoMistakesIntegrationTests(unittest.TestCase):
     def test_no_mistakes_prepare_failure_is_recorded_but_not_a_gate(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            fake_log = root / ".goal" / "fake-no-mistakes.jsonl"
+            fake_log = root / ".gezhi" / "fake-no-mistakes.jsonl"
             self._install_fake_no_mistakes(root, fake_log)
             config = load_config(self._write_project(root, disable_observability=True))
 
@@ -211,8 +216,8 @@ class NoMistakesIntegrationTests(unittest.TestCase):
         observability_table = '\n[observability]\nenabled = false\n' if disable_observability else ""
         config = f"""
 name = "test-artifact-goal"
-state_dir = ".goal"
-runs_dir = ".goal/runs"
+state_dir = ".gezhi"
+runs_dir = ".gezhi/runs"
 
 [artifact]
 path = "output/artifact.txt"
@@ -240,7 +245,7 @@ template = "Goal {{goal_name}} review {{tik_review_path}}"
 [safety]
 generated_dirs = ["output", "build"]
 """
-        config_path = root / "goal.toml"
+        config_path = root / "gezhi.toml"
         config_path.write_text(config, encoding="utf-8")
         return config_path
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from goal_cli.supervisor import (
+from gezhi.supervisor import (
     AttemptOutcomeKind,
     ensure_goal_identity,
     prepare_attempt_context,

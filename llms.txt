@@ -1,4 +1,4 @@
-# goal-cli
+# gezhi
 
 Set up this project so future coding-agent work is judged by a rebuilt,
 inspectable artifact, not by a summary of source edits.
@@ -7,22 +7,22 @@ THE THING is the finished result the user will inspect: a PDF, website, slide
 deck, report, chart pack, workbook, benchmark, app demo, or another concrete
 output.
 
-Your job is to leave the user with a working `goal.toml`, a reliable rebuild
+Your job is to leave the user with a working `gezhi.toml`, a reliable rebuild
 command, and a clear next command. The user should not need to understand
-`goal-cli` internals to get a first safe setup.
+`gezhi` internals to get a first safe setup.
 
 ## Division of Labor
 
 This file is the public one-prompt entrypoint. Use it to bootstrap the task,
 choose the correct skill, and preserve the non-expert setup contract.
 
-`skills/goal-cli-project-setup/SKILL.md` is the detailed execution runbook for
-connecting a real project to `goal-cli`. If that skill is available, read it
+`skills/gezhi-project-setup/SKILL.md` is the detailed execution runbook for
+connecting a real project to `gezhi`. If that skill is available, read it
 completely and follow it for inspection, artifact choice, producer synthesis,
-`goal.toml`, validation, and recovery.
+`gezhi.toml`, validation, and recovery.
 
-`skills/goal-cli-template-author/SKILL.md` is only for maintaining reusable
-goal-cli templates, examples, docs, or skills in the `goal-cli` repository. Do
+`skills/gezhi-template-author/SKILL.md` is only for maintaining reusable
+gezhi templates, examples, docs, or skills in the `gezhi` repository. Do
 not use it for an ordinary user's project setup.
 
 The sections below are the minimum contract and fallback path when the project
@@ -35,19 +35,19 @@ scope guardrails, not as a competing checklist.
 - If the user already named THE THING, use that artifact.
 - If THE THING is not clear, infer it from the project.
 - Ask exactly one short question only if you cannot infer the artifact safely.
-- Do not edit raw data, generated outputs, build products, `.git/`, or `.goal/`.
+- Do not edit raw data, generated outputs, build products, `.git/`, or `.gezhi/`.
 - Do not edit unrelated docs, READMEs, tests, or source files unless required
   for the setup and clearly within scope.
 - Keep future repair write access narrow; generated outputs are not source
   write scopes.
 - Do not run a real heartbeat until validation and dry-run checks pass.
 
-## Install Or Verify goal-cli
+## Install Or Verify gezhi
 
 First check:
 
 ```bash
-goal-cli -h
+gezhi -h
 ```
 
 If the command is missing, verify Python 3.11+ and install from GitHub:
@@ -55,20 +55,20 @@ If the command is missing, verify Python 3.11+ and install from GitHub:
 ```bash
 python3 --version
 python3 -m pip install --upgrade pip
-python3 -m pip install "goal-cli @ git+https://github.com/SiyaoZheng/GEZHI.git"
+python3 -m pip install "gezhi @ git+https://github.com/SiyaoZheng/GEZHI.git"
 ```
 
 If `tik.provider = "api"` will be used, install with the OpenAI extra:
 
 ```bash
-python3 -m pip install "goal-cli[openai] @ git+https://github.com/SiyaoZheng/GEZHI.git"
+python3 -m pip install "gezhi[openai] @ git+https://github.com/SiyaoZheng/GEZHI.git"
 ```
 
 API tik defaults to PackyAPI `claude-fable-5`. Credentials may come from
 `PACKYAPI_API_KEY`, `PACKYCODE_CODEX_KEY`, `OPENAI_API_KEY`, or
-`~/.config/goal-cli/api.env`.
+`~/.config/gezhi/api.env`.
 
-If you are already inside a `goal-cli` checkout, use the local checkout instead:
+If you are already inside a `gezhi` checkout, use the local checkout instead:
 
 ```bash
 python3 -m pip install -e '.[openai]'
@@ -77,7 +77,7 @@ python3 -m pip install -e '.[openai]'
 Verify again:
 
 ```bash
-goal-cli -h
+gezhi -h
 ```
 
 ## Fallback Setup Flow
@@ -87,7 +87,7 @@ goal-cli -h
 3. Find an existing command that rebuilds it, or create a small producer
    wrapper such as `scripts/goal_producer.sh`.
 4. Make the producer fail non-zero when the artifact is missing or empty.
-5. Create or update `goal.toml`.
+5. Create or update `gezhi.toml`.
 6. Choose the smallest useful tik:
    - deterministic `oracle` when a script can reject bad output;
    - command-backed `checklist` when a checklist runner should appear as its
@@ -110,40 +110,40 @@ goal-cli -h
 Run these before any real heartbeat:
 
 ```bash
-goal-cli validate
-goal-cli doctor
+gezhi validate
+gezhi doctor
 ```
 
 If using Codex tok:
 
 ```bash
-goal-cli doctor --smoke-codex-goal
+gezhi doctor --smoke-codex-goal
 ```
 
 If using `tok.provider = "codex_app_server"`:
 
 ```bash
-goal-cli doctor --smoke-codex-app-server
+gezhi doctor --smoke-codex-app-server
 ```
 
 If using `tok.provider = "claude_code_goal"`:
 
 ```bash
-goal-cli doctor --smoke-claude-code-goal
+gezhi doctor --smoke-claude-code-goal
 ```
 
 If using `tik.provider = "codex_file"`:
 
 ```bash
-goal-cli doctor --smoke-codex-goal --smoke-codex-file-tik
+gezhi doctor --smoke-codex-goal --smoke-codex-file-tik
 # or, with tok.provider = "codex_app_server":
-goal-cli doctor --smoke-codex-app-server --smoke-codex-file-tik
+gezhi doctor --smoke-codex-app-server --smoke-codex-file-tik
 ```
 
 If using `tik.provider = "claude_code_file"`:
 
 ```bash
-goal-cli doctor --smoke-claude-code-file-tik
+gezhi doctor --smoke-claude-code-file-tik
 ```
 
 If using `tik.provider = "oracle"` or `tik.provider = "checklist"`, the default
@@ -162,22 +162,22 @@ test -s path/to/artifact
 Then render prompts without changing source:
 
 ```bash
-goal-cli run --dry-run
+gezhi run --dry-run
 ```
 
 Only after those checks pass, recommend one manual heartbeat:
 
 ```bash
-goal-cli run --max-minutes 600
+gezhi run --max-minutes 600
 ```
 
-For unattended progress, recommend a timed heartbeat instead. Let goal-cli pick
+For unattended progress, recommend a timed heartbeat instead. Let gezhi pick
 the default wake-up interval unless the project needs a fixed timer: perpetual
 goals wake every 5 minutes and legacy goals every 30 minutes.
 
 ```bash
-goal-cli heartbeat install --max-minutes 600
-goal-cli heartbeat status
+gezhi heartbeat install --max-minutes 600
+gezhi heartbeat status
 ```
 
 ## Final Report
@@ -197,32 +197,32 @@ blocking command and output, then give the smallest next action.
 
 ## Agent Entry Points
 
-- [Project setup skill](skills/goal-cli-project-setup/SKILL.md): Use this to
-  connect an existing project to `goal-cli`.
-- [Template author skill](skills/goal-cli-template-author/SKILL.md): Use this
+- [Project setup skill](skills/gezhi-project-setup/SKILL.md): Use this to
+  connect an existing project to `gezhi`.
+- [Template author skill](skills/gezhi-template-author/SKILL.md): Use this
   only when improving reusable examples, checks, or docs in this repository.
 
 ## Core Documentation
 
 - [README](README.md): Product overview and one-prompt quick start.
 - [Installation](docs/installation.md): Install details and local setup checks.
-- [goal.toml schema](docs/config-schema.md): Full configuration reference.
+- [gezhi.toml schema](docs/config-schema.md): Full configuration reference.
 - [CLI reference](docs/cli-reference.md): Current command help.
 - [Skills guide](docs/skills.md): Agent-facing setup instructions.
-- [Thing-first design notes](docs/artifact-goal-notes.md): Runtime design
+- [Architecture](docs/architecture.md): Runtime design
   rationale and module boundaries.
 
 ## Examples
 
-- [PDF-first example](examples/scientificity/goal.toml): Research-paper setup
+- [PDF-first example](examples/scientificity/gezhi.toml): Research-paper setup
   where THE THING is the rebuilt PDF.
-- [PDF-first example, Claude Code](examples/scientificity-claude/goal.toml):
+- [PDF-first example, Claude Code](examples/scientificity-claude/gezhi.toml):
   The same setup with both tik and tok run by Claude Code; tik reviews via
   the `/apsr-review` slash skill.
 
 ## Optional
 
-- [Thing-first design notes](docs/artifact-goal-notes.md): Why the final
+- [Architecture](docs/architecture.md): Why the final
   output is the control point.
 - [Codex goal implementation report](docs/codex-goal-openai-implementation-report.md):
   Codex `/goal` integration details.

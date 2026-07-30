@@ -7,8 +7,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from goal_cli.cli import main
-from goal_cli.runtime import DEFAULT_MAX_MINUTES, RunResult
+from gezhi.cli import main
+from gezhi.runtime import DEFAULT_MAX_MINUTES, RunResult
 
 
 class CliTests(unittest.TestCase):
@@ -33,7 +33,7 @@ class CliTests(unittest.TestCase):
             output = io.StringIO()
 
             with (
-                mock.patch("goal_cli.cli.run_goal", return_value=RunResult(0, "active", None, "ok")) as run_goal,
+                mock.patch("gezhi.cli.run_goal", return_value=RunResult(0, "active", None, "ok")) as run_goal,
                 contextlib.redirect_stdout(output),
             ):
                 exit_code = main(["-c", str(config_path), "run"])
@@ -43,7 +43,7 @@ class CliTests(unittest.TestCase):
 
     def test_init_starter_prompt_keeps_tok_goal_to_two_plain_sentences(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            config_path = Path(temp_dir) / "goal.toml"
+            config_path = Path(temp_dir) / "gezhi.toml"
             output = io.StringIO()
 
             with contextlib.redirect_stdout(output):
@@ -70,6 +70,30 @@ class CliTests(unittest.TestCase):
             ):
                 self.assertNotIn(term, lower_text)
 
+    def test_init_rejects_legacy_config_filename_before_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / ("goal" + ".toml")
+            error = io.StringIO()
+
+            with contextlib.redirect_stderr(error):
+                exit_code = main(["-c", str(config_path), "init"])
+
+            self.assertEqual(exit_code, 2)
+            self.assertIn("legacy config filename", error.getvalue())
+            self.assertFalse(config_path.exists())
+
+    def test_init_without_config_flag_creates_only_gezhi_toml(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            output = io.StringIO()
+
+            with contextlib.chdir(root), contextlib.redirect_stdout(output):
+                exit_code = main(["init"])
+
+            self.assertEqual(exit_code, 0)
+            self.assertEqual([path.name for path in root.iterdir()], ["gezhi.toml"])
+            self.assertIn("Created", output.getvalue())
+
     def test_top_level_help_has_no_cycle_alias(self) -> None:
         output = io.StringIO()
 
@@ -80,7 +104,7 @@ class CliTests(unittest.TestCase):
         help_text = output.getvalue()
         self.assertNotIn("cycle", help_text)
         self.assertIn("Omitting the command defaults to run", help_text)
-        self.assertIn("Validate goal.toml, prompt placeholders, and writable", help_text)
+        self.assertIn("Validate gezhi.toml, prompt placeholders, and writable", help_text)
         self.assertIn("stop", help_text)
         self.assertIn("resume", help_text)
 
@@ -90,8 +114,8 @@ class CliTests(unittest.TestCase):
             output = io.StringIO()
 
             with (
-                mock.patch("goal_cli.cli.stop_perpetual", return_value=RunResult(0, "stopped", None, "stopped")) as stop,
-                mock.patch("goal_cli.cli.resume_perpetual", return_value=RunResult(0, "active", None, "resumed")) as resume,
+                mock.patch("gezhi.cli.stop_perpetual", return_value=RunResult(0, "stopped", None, "stopped")) as stop,
+                mock.patch("gezhi.cli.resume_perpetual", return_value=RunResult(0, "active", None, "resumed")) as resume,
                 contextlib.redirect_stdout(output),
             ):
                 self.assertEqual(main(["-c", str(config_path), "stop"]), 0)
@@ -127,7 +151,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, 0)
         help_text = output.getvalue()
         self.assertIn("--kill-orphans", help_text)
-        self.assertIn("when no live heartbeat lock exists", help_text)
+        self.assertIn("when no live heartbeat lock exists", " ".join(help_text.split()))
 
     def test_heartbeat_help_exposes_system_timer_commands(self) -> None:
         output = io.StringIO()
@@ -162,11 +186,11 @@ class CliTests(unittest.TestCase):
         (root / "output").mkdir()
         (root / "build").mkdir()
         (root / "scripts").mkdir()
-        config_path = root / "goal.toml"
+        config_path = root / "gezhi.toml"
         config_path.write_text(
             """name = "cli-test"
-state_dir = ".goal"
-runs_dir = ".goal/runs"
+state_dir = ".gezhi"
+runs_dir = ".gezhi/runs"
 
 [artifact]
 path = "output/artifact.txt"

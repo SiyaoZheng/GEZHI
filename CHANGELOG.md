@@ -9,6 +9,10 @@ while the public interface remains unstable.
 
 ### Added
 
+- Canonical GEZHI distribution, Python package, command, configuration, state,
+  telemetry, scheduler, skills, and examples.
+- Explicit migration guidance and fail-closed detection for earlier runtime
+  state, repository locks, and scheduler artifacts.
 - Explicit perpetual lifecycle with healthy scheduling, bounded provider
   backoff, durable operator stop/resume, and substantive attempt reframing.
 - Exact capability leases for create, modify, delete, and rename operations,
@@ -28,13 +32,14 @@ while the public interface remains unstable.
 
 ### Changed
 
-- Reframed the public repository as GEZHI while retaining `goal-cli` as the
-  stable runtime command and Python package compatibility name.
-- Replaced the goal-cli landing page with a bilingual GEZHI architecture,
+- Completed the canonical GEZHI hard cut across the public API and repository;
+  the earlier command, distribution, import package, and default paths are no
+  longer compatibility interfaces.
+- Replaced the earlier landing page with a bilingual GEZHI architecture,
   research-responsibility model, and project visual identity.
 - `tok` passes are expected to leave the configured artifact untouched; the
   producer remains responsible for rebuilding the artifact on the next
-  heartbeat, and goal-cli records violations as audit evidence instead of
+  heartbeat, and GEZHI records violations as audit evidence instead of
   treating them as terminal runtime gates.
 
 ## 0.1.0 - 2026-07-05

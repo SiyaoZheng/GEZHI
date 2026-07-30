@@ -2,15 +2,17 @@ from __future__ import annotations
 
 import os
 import plistlib
+import sys
 import tempfile
 import textwrap
 import unittest
 from pathlib import Path
 from unittest import mock
 
-from goal_cli.config import load_config
-from goal_cli.runtime import DEFAULT_MAX_MINUTES, CleanupResult, RunResult
-from goal_cli.system_heartbeat import (
+from gezhi.config import load_config
+from gezhi.migration import legacy_scheduler_artifacts
+from gezhi.runtime import DEFAULT_MAX_MINUTES, CleanupResult, RunResult
+from gezhi.system_heartbeat import (
     DEFAULT_EVERY_MINUTES,
     DEFAULT_PERPETUAL_WAKE_MINUTES,
     SystemHeartbeatOptions,
@@ -32,7 +34,7 @@ class SystemHeartbeatTests(unittest.TestCase):
                     config,
                     SystemHeartbeatOptions(
                         manager="systemd-user",
-                        label="goal-cli-test",
+                        label="gezhi-test",
                     ),
                 )
 
@@ -49,10 +51,25 @@ class SystemHeartbeatTests(unittest.TestCase):
 
             layout = build_system_heartbeat_layout(
                 config,
-                SystemHeartbeatOptions(manager="launchd", label="goal-cli-test"),
+                SystemHeartbeatOptions(manager="launchd", label="gezhi-test"),
             )
 
             self.assertEqual(layout.interval_seconds, 300)
+
+    def test_default_label_uses_canonical_gezhi_namespace(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            config = load_config(self._write_project(root))
+
+            layout = build_system_heartbeat_layout(
+                config,
+                SystemHeartbeatOptions(manager="launchd"),
+            )
+
+            self.assertRegex(
+                layout.label,
+                r"^io\.github\.siyaozheng\.gezhi\.system-heartbeat-test\.[0-9a-f]{10}$",
+            )
 
     def test_launchd_layout_runs_one_absolute_tick(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -63,22 +80,22 @@ class SystemHeartbeatTests(unittest.TestCase):
                 config,
                 SystemHeartbeatOptions(
                     manager="launchd",
-                    label="com.goal-cli.test",
+                    label="io.github.siyaozheng.gezhi.test",
                     every_minutes=15,
                     max_minutes=7,
                 ),
             )
 
             plist = plistlib.loads(layout.files[0].content.encode("utf-8"))
-            self.assertEqual(plist["Label"], "com.goal-cli.test")
+            self.assertEqual(plist["Label"], "io.github.siyaozheng.gezhi.test")
             self.assertEqual(plist["StartInterval"], 900)
             self.assertTrue(plist["RunAtLoad"])
             self.assertEqual(plist["WorkingDirectory"], str(root.resolve()))
             args = plist["ProgramArguments"]
-            self.assertEqual(args[1:3], ["-m", "goal_cli.cli"])
-            self.assertEqual(args[args.index("-c") + 1], str((root / "goal.toml").resolve()))
+            self.assertEqual(args[1:3], ["-m", "gezhi"])
+            self.assertEqual(args[args.index("-c") + 1], str((root / "gezhi.toml").resolve()))
             self.assertEqual(args[args.index("heartbeat") :], ["heartbeat", "tick", "--max-minutes", "7"])
-            self.assertEqual(plist["StandardOutPath"], str((root / ".goal" / "system-heartbeat" / "launchd.out.log").resolve()))
+            self.assertEqual(plist["StandardOutPath"], str((root / ".gezhi" / "system-heartbeat" / "launchd.out.log").resolve()))
 
     def test_systemd_layout_has_service_and_persistent_timer(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -91,22 +108,22 @@ class SystemHeartbeatTests(unittest.TestCase):
                     config,
                     SystemHeartbeatOptions(
                         manager="systemd-user",
-                        label="goal-cli-test",
+                        label="gezhi-test",
                         every_minutes=2.5,
                         max_minutes=4.5,
                     ),
                 )
 
             service, timer = layout.files
-            self.assertEqual(service.path, xdg_config / "systemd" / "user" / "goal-cli-test.service")
-            self.assertEqual(timer.path, xdg_config / "systemd" / "user" / "goal-cli-test.timer")
+            self.assertEqual(service.path, xdg_config / "systemd" / "user" / "gezhi-test.service")
+            self.assertEqual(timer.path, xdg_config / "systemd" / "user" / "gezhi-test.timer")
             self.assertIn("WorkingDirectory=" + str(root.resolve()), service.content)
-            self.assertIn("-m goal_cli.cli", service.content)
+            self.assertIn("-m gezhi", service.content)
             self.assertIn("heartbeat tick --max-minutes 4.5", service.content)
             self.assertIn("StandardOutput=append:", service.content)
             self.assertIn("OnUnitActiveSec=150s", timer.content)
             self.assertIn("Persistent=true", timer.content)
-            self.assertIn("Unit=goal-cli-test.service", timer.content)
+            self.assertIn("Unit=gezhi-test.service", timer.content)
 
     def test_install_dry_run_does_not_write_service_files(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -119,7 +136,7 @@ class SystemHeartbeatTests(unittest.TestCase):
                     config,
                     SystemHeartbeatOptions(
                         manager="systemd-user",
-                        label="goal-cli-test",
+                        label="gezhi-test",
                         every_minutes=5,
                         max_minutes=1,
                         dry_run=True,
@@ -128,8 +145,8 @@ class SystemHeartbeatTests(unittest.TestCase):
 
             self.assertEqual(result.exit_code, 0)
             self.assertTrue(any("would write" in message for message in result.messages))
-            self.assertTrue(any("would run: systemctl --user enable --now goal-cli-test.timer" in message for message in result.messages))
-            self.assertFalse((xdg_config / "systemd" / "user" / "goal-cli-test.service").exists())
+            self.assertTrue(any("would run: systemctl --user enable --now gezhi-test.timer" in message for message in result.messages))
+            self.assertFalse((xdg_config / "systemd" / "user" / "gezhi-test.service").exists())
 
     def test_install_refuses_to_overwrite_unmanaged_service_file(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -137,7 +154,7 @@ class SystemHeartbeatTests(unittest.TestCase):
             xdg_config = root / "xdg"
             unit_dir = xdg_config / "systemd" / "user"
             unit_dir.mkdir(parents=True)
-            service_path = unit_dir / "goal-cli-test.service"
+            service_path = unit_dir / "gezhi-test.service"
             service_path.write_text("[Service]\nExecStart=/bin/true\n", encoding="utf-8")
             config = load_config(self._write_project(root))
 
@@ -146,7 +163,7 @@ class SystemHeartbeatTests(unittest.TestCase):
                     config,
                     SystemHeartbeatOptions(
                         manager="systemd-user",
-                        label="goal-cli-test",
+                        label="gezhi-test",
                         every_minutes=5,
                         max_minutes=1,
                         start=False,
@@ -157,14 +174,120 @@ class SystemHeartbeatTests(unittest.TestCase):
             self.assertIn("refusing to overwrite unmanaged service file", "\n".join(result.errors))
             self.assertEqual(service_path.read_text(encoding="utf-8"), "[Service]\nExecStart=/bin/true\n")
 
+    def test_install_fails_closed_when_legacy_scheduler_is_present(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            xdg_config = root / "xdg"
+            unit_dir = xdg_config / "systemd" / "user"
+            unit_dir.mkdir(parents=True)
+            config = load_config(self._write_project(root))
+            legacy_product = "goal" + "-cli"
+            legacy_module = "goal" + "_cli.cli"
+            legacy_service = unit_dir / "custom-pre-gezhi.service"
+            legacy_timer = unit_dir / "custom-pre-gezhi.timer"
+            legacy_service.write_text(
+                "\n".join(
+                    (
+                        f"# Generated by {legacy_product} system heartbeat. Do not edit by hand.",
+                        "[Service]",
+                        f"WorkingDirectory={root.resolve()}",
+                        f"ExecStart={sys.executable} -m {legacy_module} -c {root / ('goal' + '.toml')} heartbeat tick",
+                        "",
+                    )
+                ),
+                encoding="utf-8",
+            )
+            legacy_timer.write_text("[Timer]\nOnUnitActiveSec=300s\n", encoding="utf-8")
+
+            with mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": str(xdg_config)}):
+                result = install_system_heartbeat(
+                    config,
+                    SystemHeartbeatOptions(
+                        manager="systemd-user",
+                        label="gezhi-test",
+                        every_minutes=5,
+                        max_minutes=1,
+                        start=False,
+                    ),
+                )
+
+            self.assertEqual(result.exit_code, 2)
+            self.assertIn("legacy scheduler artifacts require manual uninstall", "\n".join(result.errors))
+            self.assertFalse((unit_dir / "gezhi-test.service").exists())
+
+    def test_custom_legacy_launchd_symlink_is_detected_after_goal_rename(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "project"
+            home = Path(temp_dir) / "home"
+            agent_dir = home / "Library" / "LaunchAgents"
+            agent_dir.mkdir(parents=True)
+            root.mkdir()
+            legacy_module = "goal" + "_cli.cli"
+            target = home / "legacy-custom.plist"
+            target.write_bytes(
+                plistlib.dumps(
+                    {
+                        "Label": "custom-before-gezhi",
+                        "WorkingDirectory": str(root.resolve()),
+                        "ProgramArguments": [
+                            sys.executable,
+                            "-m",
+                            legacy_module,
+                            "-c",
+                            str(root / ("goal" + ".toml")),
+                            "heartbeat",
+                            "tick",
+                        ],
+                    }
+                )
+            )
+            linked_agent = agent_dir / "custom-before-gezhi.plist"
+            linked_agent.symlink_to(target)
+
+            with mock.patch("gezhi.migration.Path.home", return_value=home):
+                artifacts = legacy_scheduler_artifacts("launchd", "renamed-goal", root)
+
+            self.assertEqual(artifacts, (linked_agent,))
+
+    def test_legacy_systemd_service_for_prefix_neighbor_is_ignored(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            base = Path(temp_dir)
+            root = base / "paper"
+            neighbor = base / "paper-old"
+            xdg_config = base / "xdg"
+            unit_dir = xdg_config / "systemd" / "user"
+            root.mkdir()
+            neighbor.mkdir()
+            unit_dir.mkdir(parents=True)
+            legacy_product = "goal" + "-cli"
+            legacy_module = "goal" + "_cli.cli"
+            service = unit_dir / "neighbor.service"
+            service.write_text(
+                "\n".join(
+                    (
+                        f"# Generated by {legacy_product} system heartbeat. Do not edit by hand.",
+                        "[Service]",
+                        f"WorkingDirectory={neighbor.resolve()}",
+                        f"ExecStart={sys.executable} -m {legacy_module} heartbeat tick",
+                        "",
+                    )
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": str(xdg_config)}):
+                artifacts = legacy_scheduler_artifacts("systemd-user", "paper", root)
+
+            self.assertEqual(artifacts, ())
+
     def test_tick_treats_active_lock_as_skipped_success(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             config = load_config(self._write_project(root))
 
             with (
-                mock.patch("goal_cli.system_heartbeat.cleanup_runtime", return_value=CleanupResult(("cleanup found nothing to do",), ("heartbeat lock is active",))),
-                mock.patch("goal_cli.system_heartbeat.run_goal", return_value=RunResult(1, "locked", None, "heartbeat already running")) as run_goal,
+                mock.patch("gezhi.system_heartbeat.cleanup_runtime", return_value=CleanupResult(("cleanup found nothing to do",), ("heartbeat lock is active",))),
+                mock.patch("gezhi.system_heartbeat.run_goal", return_value=RunResult(1, "locked", None, "heartbeat already running")) as run_goal,
             ):
                 result = run_system_heartbeat_tick(config, max_minutes=3)
 
@@ -182,8 +305,8 @@ class SystemHeartbeatTests(unittest.TestCase):
         config = textwrap.dedent(
             """
             name = "system-heartbeat-test"
-            state_dir = ".goal"
-            runs_dir = ".goal/runs"
+            state_dir = ".gezhi"
+            runs_dir = ".gezhi/runs"
 
             [artifact]
             path = "output/artifact.txt"
@@ -217,7 +340,7 @@ class SystemHeartbeatTests(unittest.TestCase):
         ).strip()
         if perpetual:
             config += "\n\n[perpetual]\nenabled = true"
-        config_path = root / "goal.toml"
+        config_path = root / "gezhi.toml"
         config_path.write_text(config + "\n", encoding="utf-8")
         return config_path
 

@@ -33,10 +33,6 @@
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-1C1C1C?style=for-the-badge" /></a>
 </p>
 
-> [!NOTE]
-> **GEZHI / 格致是公开项目名。** 为了不破坏已有项目，运行命令与 Python
-> 包仍保留 **`goal-cli`** 这一兼容名称。
-
 ## 为什么需要格致
 
 AI 可以检索文献、整理证据、清洗数据、编写代码，也可以协助写作与排版。
@@ -56,7 +52,7 @@ flowchart TB
     GE["格 · 评审<br/>全稿判断 · 根因诊断 · 有界任务书"]
     ZHI["致 · 修订<br/>授权修改 · 重建成品 · 返回证据"]
     S["AI4SS 研究能力层<br/>设计 · 证据 · 分析 · 写作"]
-    C["goal-cli 控制面<br/>生产 · 评审 · 路由 · 循环"]
+    C["GEZHI 控制面<br/>生产 · 评审 · 路由 · 循环"]
     A["论文 + 代码 + 数据 + 溯源"]
 
     R --> G
@@ -73,7 +69,7 @@ flowchart TB
 | --- | --- |
 | **研究架构层** | 研究者决定什么值得研究，规划研究路径，并把关证据与推断边界。 |
 | **学术能力层** | AI4SS 能力层支持研究设计、证据构建、分析审查与学术写作。 |
-| **运行控制面** | `goal-cli` 重建成品、发起评审、持久化判断，并调度下一次有界工作。 |
+| **运行控制面** | `gezhi` 重建成品、发起评审、持久化判断，并调度下一次有界工作。 |
 
 ## 格与致
 
@@ -100,8 +96,8 @@ flowchart TB
 从本仓库安装格致目前使用的控制面：
 
 ```bash
-python3 -m pip install "goal-cli[openai] @ git+https://github.com/SiyaoZheng/GEZHI.git"
-goal-cli --help
+python3 -m pip install "gezhi[openai] @ git+https://github.com/SiyaoZheng/GEZHI.git"
+gezhi --help
 ```
 
 然后把唯一入口交给 coding agent：
@@ -110,28 +106,34 @@ goal-cli --help
 Read https://github.com/SiyaoZheng/GEZHI/blob/main/llms.txt and configure this project as a GEZHI research loop.
 ```
 
-第一次运行前，先检查配置与环境：
+如果手动配置，第一次运行前先创建并编辑配置，再检查环境：
 
 ```bash
-goal-cli validate
-goal-cli doctor
-goal-cli run --dry-run
+gezhi init
+# 编辑 gezhi.toml：设置成品、构建命令、评审方式与可写源码范围。
+gezhi validate
+gezhi doctor
+gezhi run --dry-run
 ```
 
 ## 当前实现
 
-本仓库目前提供格致使用的运行控制面。为了兼容已有项目，命令、包路径和配置中
-仍会看到 `goal-cli`。
+本仓库以一套统一身份发布格致：Python distribution、import package 与命令均为
+`gezhi`；项目配置为 `gezhi.toml`，运行状态保存在 `.gezhi/`。
+
+运行时把评审角色称为 `tik`，把有界源码修订角色称为 `tok`。在格致架构中，
+二者分别支撑“格”与“致”，是运行角色名，而不是另外两个产品。
 
 | 路径 | 在格致中的作用 |
 | --- | --- |
-| [`src/goal_cli/`](src/goal_cli/) | 持久运行、以成品为中心的控制循环 |
-| [`goal-cli-project-setup`](skills/goal-cli-project-setup/SKILL.md) | 把现有研究项目接入 GEZHI 控制循环 |
-| [`goal-cli-template-author`](skills/goal-cli-template-author/SKILL.md) | 改进可复用模板、检查与示例 |
+| [`src/gezhi/`](src/gezhi/) | 持久运行、以成品为中心的控制循环 |
+| [`gezhi-project-setup`](skills/gezhi-project-setup/SKILL.md) | 把现有研究项目接入 GEZHI 控制循环 |
+| [`gezhi-template-author`](skills/gezhi-template-author/SKILL.md) | 改进可复用模板、检查与示例 |
 | [`examples/scientificity/`](examples/scientificity/) | 带可执行检查的实证论文示例 |
-| [`docs/config-schema.md`](docs/config-schema.md) | 完整 `goal.toml` 契约 |
+| [`docs/config-schema.md`](docs/config-schema.md) | 完整 `gezhi.toml` 契约 |
 | [`docs/cli-reference.md`](docs/cli-reference.md) | 当前命令说明 |
-| [`docs/artifact-goal-notes.md`](docs/artifact-goal-notes.md) | 控制面设计说明 |
+| [`docs/architecture.md`](docs/architecture.md) | 控制面设计说明 |
+| [`docs/migration.md`](docs/migration.md) | 从旧运行时身份进行 hard cut 的迁移说明 |
 
 ## 不可妥协的原则
 

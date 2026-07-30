@@ -1,0 +1,6 @@
+interface:
+  display_name: "GEZHI"
+  short_description: "Repo-specific patterns and workflows for gezhi"
+  default_prompt: "Use the gezhi repo skill to follow existing architecture, testing, and workflow conventions."
+policy:
+  allow_implicit_invocation: true

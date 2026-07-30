@@ -7,13 +7,13 @@ import textwrap
 import unittest
 from pathlib import Path
 
-from goal_cli.adapters import ProducerOutcome, TikOutcome
-from goal_cli.config import load_config
-from goal_cli.isolation import IsolatedWorkspace
-from goal_cli.lifecycle import CallState, FrozenClock, WorkState
-from goal_cli.runtime import RuntimeOptions, load_state, resume_perpetual, run_goal, stop_perpetual
-from goal_cli.supervisor import AttemptOutcomeKind
-from goal_cli.tok_execution import TokExecutionResult
+from gezhi.adapters import ProducerOutcome, TikOutcome
+from gezhi.config import load_config
+from gezhi.isolation import IsolatedWorkspace
+from gezhi.lifecycle import CallState, FrozenClock, WorkState
+from gezhi.runtime import RuntimeOptions, load_state, resume_perpetual, run_goal, stop_perpetual
+from gezhi.supervisor import AttemptOutcomeKind
+from gezhi.tok_execution import TokExecutionResult
 
 
 UTC = dt.timezone.utc
@@ -611,13 +611,13 @@ class PerpetualLifecycleTests(unittest.TestCase):
             if lease
             else ""
         )
-        config_path = root / "goal.toml"
+        config_path = root / "gezhi.toml"
         config_path.write_text(
             textwrap.dedent(
                 f"""
                 name = "perpetual-lifecycle-test"
-                state_dir = ".goal"
-                runs_dir = ".goal/runs"
+                state_dir = ".gezhi"
+                runs_dir = ".gezhi/runs"
 
                 [artifact]
                 path = "output/artifact.txt"
